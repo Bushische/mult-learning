@@ -8,6 +8,7 @@ import { computeRewardSeconds } from "@mult/shared";
 import { useAuthStore } from "../../stores/auth-store";
 import { createApiStub, renderApp, resetSession } from "../../test/harness";
 import { CountdownBar } from "./components/CountdownBar";
+import { OPTIONS_MS, PAUSE1_MS, ROLL1_MS, ROLL2_MS } from "./lib/constants";
 import { buildOptions, generateQuestion, shuffle } from "./lib/question";
 import { createSeededRng, setRng } from "./lib/random";
 
@@ -32,46 +33,49 @@ const LONG_GAME: Game = { ...GAME, id: "g-long", name: "Long", questionSeconds: 
 const ALL_GAMES: Game[] = [GAME, TEN_GAME, LONG_GAME];
 
 let bank = 0;
-let frames: FrameRequestCallback[] = [];
-let frameId = 0;
-let virtualNow = 0;
 
-function installRaf(): void {
-  vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
-    frames.push(cb);
-    frameId += 1;
-    return frameId;
-  });
-  vi.stubGlobal("cancelAnimationFrame", () => {
-    frames = [];
+/** Advance the fake clock; every timer due in the window fires deterministically. */
+async function tick(ms: number): Promise<void> {
+  await act(async () => {
+    vi.advanceTimersByTime(ms);
   });
 }
 
-function tickFrames(times: number, stepMs = 50): void {
-  for (let i = 0; i < times; i += 1) {
-    virtualNow += stepMs;
-    const current = frames;
-    frames = [];
-    for (const cb of current) cb(virtualNow);
+/**
+ * Flush the games load and stop the moment the slots mount. Never use `waitFor`
+ * for phase synchronization: its polling would advance the fake clock by an
+ * unknown amount, and chained phase timers only fire when every link was
+ * scheduled before the clock passes it — so advance in small steps and let
+ * each step's assertions observe the phase deterministically.
+ */
+async function waitForLoad(): Promise<void> {
+  for (let i = 0; i < 40 && !screen.queryByTestId("question"); i += 1) {
+    await tick(50);
   }
+  expect(screen.queryByTestId("question")).not.toBeNull();
 }
 
-/** Roll the slot machine to its end. */
-function finishRoll(): void {
-  act(() => {
-    tickFrames(60);
-  });
+/** Step until the answer buttons fade in (the options phase). */
+async function stepToOptions(): Promise<void> {
+  await waitForLoad();
+  for (let i = 0; i < 30 && !screen.queryByTestId("answers"); i += 1) {
+    await tick(100);
+  }
+  expect(screen.queryByTestId("answers")).not.toBeNull();
 }
 
-/** Wait for the question to exist, then roll it out and wait for the answer phase. */
+/** Run the whole pre-question sequence deterministically. */
 async function startQuestion(): Promise<void> {
-  await waitFor(() => {
-    expect(screen.getAllByTestId(/^answer-/).length).toBe(GAME.variantCount);
-  });
-  finishRoll();
-  await waitFor(() => {
-    expect(screen.getAllByTestId(/^answer-/)[0]).not.toBeDisabled();
-  });
+  await stepToOptions();
+  for (
+    let i = 0;
+    i < 40 &&
+    (screen.getAllByTestId(/^answer-/)[0] as HTMLButtonElement | undefined)?.disabled !== false;
+    i += 1
+  ) {
+    await tick(100);
+  }
+  expect(screen.getAllByTestId(/^answer-/)[0]).not.toBeDisabled();
 }
 
 function readFactors(): { a: number; b: number } {
@@ -121,17 +125,12 @@ beforeEach(() => {
     user: { id: "u-child", username: "child1", role: "user" },
   });
   bank = 0;
-  frames = [];
-  frameId = 0;
-  virtualNow = 0;
-  installRaf();
   setRng(createSeededRng(7));
   vi.useFakeTimers({ shouldAdvanceTime: true });
 });
 
 afterEach(() => {
   vi.useRealTimers();
-  vi.unstubAllGlobals();
 });
 
 describe("T12 — play screen", () => {
@@ -332,10 +331,7 @@ describe("T12 — play screen", () => {
     await screen.findByTestId("question");
 
     unmount();
-    act(() => {
-      tickFrames(60);
-      vi.advanceTimersByTime(20_000);
-    });
+    await tick(20_000);
 
     expect(stub.calls.some((call) => call.url === "/api/answers")).toBe(false);
   });
@@ -496,5 +492,113 @@ describe("T24 — earning progress bar", () => {
 
     expect(screen.getByTestId("earning-current")).toHaveTextContent("+0:10");
     expect(screen.getByTestId("earning-max")).toHaveTextContent("max +0:10");
+  });
+});
+
+describe("T25 — roll sequence with deliberate pauses", () => {
+  it("case 4: the named phase durations total at least 2 s with pauses of 300 ms+", () => {
+    expect(ROLL1_MS + PAUSE1_MS + OPTIONS_MS + ROLL2_MS).toBeGreaterThanOrEqual(2000);
+    expect(PAUSE1_MS).toBeGreaterThanOrEqual(300);
+    expect(OPTIONS_MS).toBeGreaterThanOrEqual(300);
+  });
+
+  it("case 1: the first number locks before the options become visible", async () => {
+    bank = 0;
+    apiStub();
+    renderApp("/play/g-easy");
+    await waitForLoad();
+
+    // Sample every 100 ms: the spin changes Num 1 about every 60 ms, so two
+    // equal reads in a row mean it locked. Stop at the options phase.
+    let prevA: string | null = null;
+    let stablePreOptions = 0;
+    let sawSpin = false;
+    let optionsA: string | null = null;
+    for (let i = 0; i < 30; i += 1) {
+      await tick(100);
+      const a = screen.queryByTestId("factor-a")?.textContent ?? null;
+      const answers = screen.queryByTestId("answers") !== null;
+      if (!answers && a !== null) {
+        if (a === prevA) stablePreOptions += 1;
+        else if (prevA !== null) sawSpin = true;
+      }
+      if (answers) {
+        optionsA = a;
+        break;
+      }
+      prevA = a;
+    }
+
+    expect(optionsA).not.toBeNull();
+    expect(screen.queryByTestId("answers")).not.toBeNull();
+    // Num 1 moved at least once (the roll) and then sat still with no options
+    expect(sawSpin).toBe(true);
+    expect(stablePreOptions).toBeGreaterThanOrEqual(2);
+    expect(optionsA).toBe(prevA);
+  });
+
+  it("case 2: the options are visible (disabled) before the second number locks", async () => {
+    bank = 0;
+    const stub = apiStub();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderApp("/play/g-easy");
+    await stepToOptions();
+
+    const buttons = screen.getAllByTestId(/^answer-/);
+    expect(buttons).toHaveLength(GAME.variantCount);
+    for (const button of buttons) expect(button).toBeDisabled();
+    expect(screen.getByTestId("factor-b")).toHaveTextContent("?");
+
+    // a tap on a disabled option does nothing: no submission
+    await user.click(buttons[0] as HTMLElement);
+    expect(stub.calls.some((call) => call.url === "/api/answers")).toBe(false);
+  });
+
+  it("case 3: no timeout can fire during the pauses", async () => {
+    bank = 0;
+    const stub = apiStub();
+    renderApp("/play/g-easy");
+    await stepToOptions();
+
+    expect(stub.calls.some((call) => call.url === "/api/answers")).toBe(false);
+    expect(screen.queryByTestId("feedback")).toBeNull();
+  });
+
+  it("case 5: unmounting mid-pause cancels pending timers — no stray submissions", async () => {
+    bank = 0;
+    const stub = apiStub();
+    const view = renderApp("/play/g-easy");
+    await stepToOptions();
+    expect(screen.getByTestId("answers")).toBeInTheDocument();
+
+    view.unmount();
+    await tick(20_000);
+
+    expect(stub.calls.some((call) => call.url === "/api/answers")).toBe(false);
+  });
+
+  it("case 6: after the second number locks the options enable and the countdown starts", async () => {
+    bank = 0;
+    apiStub();
+    renderApp("/play/g-easy");
+    await stepToOptions();
+    expect(screen.getAllByTestId(/^answer-/)[0]).toBeDisabled();
+
+    // roll2: step until Num 2 spins (no longer hidden)
+    for (let i = 0; i < 20 && screen.getByTestId("factor-b").textContent === "?"; i += 1) {
+      await tick(100);
+    }
+    expect(screen.getByTestId("factor-b").textContent).toMatch(/^\d+$/);
+    // question: step until the options enable on the same tick the countdown starts
+    for (
+      let i = 0;
+      i < 30 && (screen.getAllByTestId(/^answer-/)[0] as HTMLButtonElement).disabled;
+      i += 1
+    ) {
+      await tick(100);
+    }
+    expect(screen.getAllByTestId(/^answer-/)[0]).not.toBeDisabled();
+    expect(screen.getByTestId("factor-b").textContent).toMatch(/^\d+$/);
+    expect(screen.getByTestId("earning-current")).toHaveTextContent("+0:10");
   });
 });

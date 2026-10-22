@@ -1,11 +1,13 @@
 interface SlotDisplayProps {
   a: number;
-  b: number;
-  done: boolean;
+  /** `null` renders as `?` — the number is still hidden. */
+  b: number | null;
+  aLocked: boolean;
+  bLocked: boolean;
 }
 
 /** `[ Num 1 ] × [ Num 2 ] = ?` — the slot-machine display. */
-export function SlotDisplay({ a, b, done }: SlotDisplayProps) {
+export function SlotDisplay({ a, b, aLocked, bLocked }: SlotDisplayProps) {
   return (
     <div
       className="flex items-center justify-center gap-4 text-5xl font-black"
@@ -14,7 +16,7 @@ export function SlotDisplay({ a, b, done }: SlotDisplayProps) {
       <span
         data-testid="factor-a"
         className={`min-w-[72px] rounded-2xl border-4 px-4 py-2 text-center ${
-          done ? "border-sky-500 bg-white" : "border-slate-300 bg-slate-50"
+          aLocked ? "border-sky-500 bg-white" : "border-slate-300 bg-slate-50"
         }`}
       >
         {a}
@@ -23,10 +25,10 @@ export function SlotDisplay({ a, b, done }: SlotDisplayProps) {
       <span
         data-testid="factor-b"
         className={`min-w-[72px] rounded-2xl border-4 px-4 py-2 text-center ${
-          done ? "border-sky-500 bg-white" : "border-slate-300 bg-slate-50"
+          bLocked ? "border-sky-500 bg-white" : "border-slate-300 bg-slate-50"
         }`}
       >
-        {b}
+        {b ?? "?"}
       </span>
       <span className="text-slate-400">=</span>
       <span className="text-slate-400">?</span>

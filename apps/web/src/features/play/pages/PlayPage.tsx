@@ -12,27 +12,31 @@ import { HintBubble } from "../components/HintBubble";
 import { SessionSummaryCard } from "../components/SessionSummaryCard";
 import { SlotDisplay } from "../components/SlotDisplay";
 import { useCountdown } from "../hooks/useCountdown";
-import { useSlotRoll } from "../hooks/useSlotRoll";
-import { QUESTION_SECONDS, ROLL_DURATION_MS } from "../lib/constants";
+import {
+  OPTIONS_MS,
+  PAUSE1_MS,
+  QUESTION_SECONDS,
+  ROLL1_MS,
+  ROLL2_MS,
+  SPIN_TICK_MS,
+} from "../lib/constants";
 import { type Question, generateQuestion } from "../lib/question";
 import { rng } from "../lib/random";
 import { buildSummary } from "../lib/session";
 
-type Phase = "rolling" | "question" | "feedback" | "summary";
+type Phase = "roll1" | "pause1" | "options" | "roll2" | "question" | "feedback" | "summary";
 
 interface PlayPageProps {
   /** Overrides the `:gameId` route parameter (tests). */
   gameId?: string;
-  rollDurationMs?: number;
   questionSeconds?: number;
 }
 
 /** The core loop: roll → answer → feedback → next question. */
-export function PlayPage({ gameId, rollDurationMs, questionSeconds }: PlayPageProps) {
+export function PlayPage({ gameId, questionSeconds }: PlayPageProps) {
   const params = useParams();
   const navigate = useNavigate();
   const activeGameId = gameId ?? params.gameId ?? "";
-  const rollMs = rollDurationMs ?? ROLL_DURATION_MS;
 
   const { data: games } = useGames();
   const game: Game | undefined = useMemo(
@@ -42,7 +46,7 @@ export function PlayPage({ gameId, rollDurationMs, questionSeconds }: PlayPagePr
   /** The countdown length comes from the game; the prop is a test override. */
   const seconds = questionSeconds ?? game?.questionSeconds ?? QUESTION_SECONDS;
 
-  const [phase, setPhase] = useState<Phase>("rolling");
+  const [phase, setPhase] = useState<Phase>("roll1");
   const [question, setQuestion] = useState<Question | null>(null);
   const [chosen, setChosen] = useState<number | null>(null);
   const [tries, setTries] = useState(0);
@@ -50,6 +54,10 @@ export function PlayPage({ gameId, rollDurationMs, questionSeconds }: PlayPagePr
   const [bankAdded, setBankAdded] = useState(0);
   const [bank, setBank] = useState<number | null>(null);
   const [lastCorrect, setLastCorrect] = useState<boolean | null>(null);
+  /** The numbers on display: Num 1 shuffles during `roll1`, Num 2 (`null` = `?`)
+   * shuffles during `roll2` and both lock before the question opens. */
+  const [displayA, setDisplayA] = useState(1);
+  const [displayB, setDisplayB] = useState<number | null>(null);
   const { data: me } = useMe();
   /** The countdown start of the current question (elapsedMs is measured from it). */
   const questionStartedAt = useRef(0);
@@ -59,10 +67,13 @@ export function PlayPage({ gameId, rollDurationMs, questionSeconds }: PlayPagePr
 
   const startQuestion = useCallback(() => {
     if (!game) return;
-    setQuestion(generateQuestion(game, rng));
+    const next = generateQuestion(game, rng);
+    setQuestion(next);
     setChosen(null);
     setLastCorrect(null);
-    setPhase("rolling");
+    setDisplayA(1 + Math.floor(rng() * 20));
+    setDisplayB(null);
+    setPhase("roll1");
   }, [game]);
 
   useEffect(() => {
@@ -71,19 +82,57 @@ export function PlayPage({ gameId, rollDurationMs, questionSeconds }: PlayPagePr
     }
   }, [game, question, startQuestion]);
 
-  const roll = useSlotRoll(
-    { a: question?.factorA ?? 1, b: question?.factorB ?? 1 },
-    rollMs,
-    phase === "rolling" && question !== null,
-    rng,
-  );
-
+  /**
+   * The pre-question sequence: Num 1 spins fast and locks → a beat with Num 2
+   * hidden → the options fade in (disabled) → Num 2 spins, decelerates and
+   * locks → the countdown starts. Every timer is cancelled when the phase or
+   * the question changes (unmount included), so no stray submission can fire.
+   */
   useEffect(() => {
-    if (phase === "rolling" && roll.done && question) {
-      questionStartedAt.current = Date.now();
-      setPhase("question");
+    if (!question) return;
+    if (phase === "roll1") {
+      const spin = setInterval(() => {
+        setDisplayA(1 + Math.floor(rng() * 20));
+      }, SPIN_TICK_MS);
+      const lock = setTimeout(() => {
+        clearInterval(spin);
+        setDisplayA(question.factorA);
+        setPhase("pause1");
+      }, ROLL1_MS);
+      return () => {
+        clearInterval(spin);
+        clearTimeout(lock);
+      };
     }
-  }, [phase, roll.done, question]);
+    if (phase === "pause1") {
+      const timer = setTimeout(() => setPhase("options"), PAUSE1_MS);
+      return () => clearTimeout(timer);
+    }
+    if (phase === "options") {
+      const timer = setTimeout(() => setPhase("roll2"), OPTIONS_MS);
+      return () => clearTimeout(timer);
+    }
+    if (phase === "roll2") {
+      let gap = SPIN_TICK_MS;
+      let waited = 0;
+      let timer: ReturnType<typeof setTimeout>;
+      const tick = () => {
+        waited += gap;
+        if (waited >= ROLL2_MS) {
+          setDisplayB(question.factorB);
+          questionStartedAt.current = Date.now();
+          setPhase("question");
+          return;
+        }
+        setDisplayB(1 + Math.floor(rng() * 20));
+        gap = Math.min(Math.round(gap * 1.4), 200);
+        timer = setTimeout(tick, gap);
+      };
+      timer = setTimeout(tick, gap);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [phase, question]);
 
   const record = useCallback(
     async (value: number | null) => {
@@ -186,18 +235,25 @@ export function PlayPage({ gameId, rollDurationMs, questionSeconds }: PlayPagePr
           />
         </div>
 
-        <SlotDisplay a={roll.a} b={roll.b} done={phase === "question" || phase === "feedback"} />
+        <SlotDisplay
+          a={displayA}
+          b={displayB}
+          aLocked={phase !== "roll1"}
+          bLocked={phase === "question" || phase === "feedback"}
+        />
 
         {hint ? <HintBubble text={hint} /> : null}
 
-        {question ? (
-          <AnswerButtons
-            options={question.options}
-            disabled={phase !== "question"}
-            chosen={chosen}
-            rightAnswer={phase === "feedback" ? question.rightAnswer : null}
-            onSelect={(value) => void record(value)}
-          />
+        {question && phase !== "roll1" && phase !== "pause1" ? (
+          <div style={{ animation: "play-options-in 0.3s ease-out" }}>
+            <AnswerButtons
+              options={question.options}
+              disabled={phase !== "question"}
+              chosen={chosen}
+              rightAnswer={phase === "feedback" ? question.rightAnswer : null}
+              onSelect={(value) => void record(value)}
+            />
+          </div>
         ) : null}
 
         {phase === "feedback" ? (
