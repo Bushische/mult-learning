@@ -1,36 +1,39 @@
 # Dev environment. SQLite runs in-process in the api container — no db service.
-# NOTE (skeleton): `dev-server.mjs`, `/health`, and persistence paths are created by
-# the tasks that bootstrap the api/web; adjust commands/details to match the code.
+# The api/web sources are mounted from the repo root so that pnpm's workspace
+# node_modules (symlinked into the store) stay intact inside the container.
 services:
   api:
     image: node:20-alpine
-    working_dir: /app
-    command: node --watch src/dev-server.mjs
+    working_dir: /app/apps/api
+    command: sh -c "npm i -g pnpm@9.12.0 >/dev/null 2>&1 && pnpm install --prefer-offline && node src/dev-server.mjs"
     environment:
       NODE_ENV: ${NODE_ENV:-development}
+      HOST: 0.0.0.0
       PORT: ${PORT:-3000}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env (see .env.example)}
       DATABASE_PATH: ${DATABASE_PATH:-/data/app.db}
+      CORS_ORIGIN: ${CORS_ORIGIN:-}
     volumes:
-      - ./apps/api:/app
+      - .:/app
       - data:/data
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://localhost:3000/health']
       interval: 10s
       timeout: 3s
       retries: 5
-      start_period: 5s
+      start_period: 15s
 
   web:
     image: node:20-alpine
-    working_dir: /app
-    command: node src/dev-server.mjs
+    working_dir: /app/apps/web
+    command: sh -c "npm i -g pnpm@9.12.0 >/dev/null 2>&1 && pnpm install --prefer-offline && node src/dev-server.mjs"
     environment:
       WEB_PORT: ${WEB_PORT:-5173}
       API_HOST: api
       API_PORT: ${PORT:-3000}
     volumes:
-      - ./apps/web:/app
+      - .:/app
     ports:
       - '${WEB_PORT:-5173}:5173'
     depends_on:
