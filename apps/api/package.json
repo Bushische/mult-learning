@@ -5,16 +5,18 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "start": "node dist/index.js",
+    "start": "node dist/src/index.js",
     "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
-    "db:seed": "tsx src/db/seed.ts"
+    "db:seed": "tsx scripts/seed.ts",
+    "db:seed:built": "node dist/scripts/seed.js"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
     "@fastify/cors": "^10.0.1",
+    "@paralleldrive/cuid2": "^3.3.0",
     "bcryptjs": "^2.4.3",
     "better-sqlite3": "^13.0.3",
     "drizzle-orm": "^0.45.4",

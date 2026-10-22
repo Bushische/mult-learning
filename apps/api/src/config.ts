@@ -39,6 +39,25 @@ export class ConfigError extends Error {
   }
 }
 
+/** Config subset needed by the db scripts (no server settings required). */
+export const databaseEnvSchema = z.object({
+  DATABASE_PATH: envSchema.shape.DATABASE_PATH,
+});
+
+/** Load only the database settings (used by `db:migrate` / `db:seed`). */
+export function loadDatabaseConfig(env: NodeJS.ProcessEnv = process.env): {
+  databasePath: string;
+} {
+  const parsed = databaseEnvSchema.safeParse(env);
+  if (!parsed.success) {
+    const details = parsed.error.issues
+      .map((issue) => `${issue.path.join(".") || "env"}: ${issue.message}`)
+      .join("; ");
+    throw new ConfigError(`Invalid environment configuration — ${details}`);
+  }
+  return { databasePath: parsed.data.DATABASE_PATH };
+}
+
 /** Parse + validate the environment. Throws a readable `ConfigError` on bad input. */
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const parsed = envSchema.safeParse(env);

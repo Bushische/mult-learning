@@ -3,6 +3,7 @@ import cors from "@fastify/cors";
 import Fastify, { type FastifyInstance } from "fastify";
 import { z } from "zod";
 import { type AppConfig, loadConfig } from "./config.js";
+import { type Db, createDb } from "./db/client.js";
 import { registerErrorHandler } from "./plugins/error-handler.js";
 
 export const healthResponseSchema = z.object({ status: z.literal("ok") });
@@ -12,16 +13,21 @@ export interface BuildAppOptions {
   config?: AppConfig;
   /** `false` disables the pino logger (used by tests). */
   logger?: boolean;
+  /** Drizzle client. Defaults to a fresh in-memory database (test convenience). */
+  db?: Db;
 }
 
 /** Build the Fastify instance: plugins, error contract, routes. */
 export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
   const config = options.config ?? loadConfig();
   const quiet = options.logger === false;
+  const db = options.db ?? createDb(":memory:").db;
 
   const app = Fastify({
     logger: quiet ? false : { level: config.logLevel },
   });
+
+  app.decorate("db", db);
 
   await app.register(cors, {
     origin: config.corsOrigins ?? true,
