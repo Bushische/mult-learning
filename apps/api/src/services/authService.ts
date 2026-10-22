@@ -91,11 +91,21 @@ export function verifyCredentials(db: Db, username: string, pin: string): Sessio
 
 /** Login: issues an access token + a refresh token (stored hashed). */
 export function login(db: Db, jwtSecret: string, username: string, pin: string): AuthResult {
-  const user = verifyCredentials(db, username, pin);
-  if (!user) throw unauthorized("Invalid username or PIN");
+  const user = findUserByUsername(db, username);
+  if (!user) {
+    // Keep the timing similar for unknown users (no user enumeration).
+    bcrypt.compareSync(pin, DUMMY_PIN_HASH);
+    throw unauthorized("Invalid username or PIN");
+  }
+  if (!bcrypt.compareSync(pin, user.pinHash)) throw unauthorized("Invalid username or PIN");
+  const sessionUser = toSessionUser(user);
   const refreshToken = generateRefreshToken();
   storeRefreshToken(db, user.id, refreshToken);
-  return { accessToken: signAccessToken(user, jwtSecret), user, refreshToken };
+  return {
+    accessToken: signAccessToken(sessionUser, user.pinHash, jwtSecret),
+    user: sessionUser,
+    refreshToken,
+  };
 }
 
 /** Refresh: rotates the refresh cookie and issues a fresh access token. */
@@ -114,7 +124,7 @@ export function refresh(db: Db, jwtSecret: string, rawToken: string): AuthResult
   const sessionUser = toSessionUser(user);
   const nextRefreshToken = rotateRefreshToken(db, rawToken, user.id);
   return {
-    accessToken: signAccessToken(sessionUser, jwtSecret),
+    accessToken: signAccessToken(sessionUser, user.pinHash, jwtSecret),
     user: sessionUser,
     refreshToken: nextRefreshToken,
   };

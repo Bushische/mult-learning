@@ -5,6 +5,7 @@ import { z } from "zod";
 import { type AppConfig, loadConfig } from "./config.js";
 import { type Db, createDb } from "./db/client.js";
 import { registerErrorHandler } from "./plugins/error-handler.js";
+import { adminUserRoutes } from "./routes/admin/users.js";
 import { answerRoutes } from "./routes/answers.js";
 import { authRoutes } from "./routes/auth.js";
 import { gameRoutes } from "./routes/games.js";
@@ -52,6 +53,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   await app.register(gameRoutes, { prefix: "/api" });
   await app.register(answerRoutes, { prefix: "/api" });
   await app.register(statsRoutes, { prefix: "/api" });
+  await app.register(adminUserRoutes, { prefix: "/api/admin" });
 
   return app;
 }
