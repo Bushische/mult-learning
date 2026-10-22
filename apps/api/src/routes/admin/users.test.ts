@@ -264,3 +264,125 @@ describe("T8 — admin users", () => {
     expect(deleted.json().error.code).toBe("CONFLICT");
   });
 });
+
+describe("T20 — admin child stats", () => {
+  it("case 1+4: totals match the daily sums and out-of-range cells never appear", async () => {
+    const child = ctx.db.select().from(users).where(eq(users.username, "child1")).get();
+    const childId = child?.id ?? "";
+    const today = new Date().toISOString().slice(0, 10);
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    ctx.db
+      .insert(dailyStats)
+      .values([
+        { userId: childId, date: today, totalTries: 10, correctTries: 7, timeEarnedSeconds: 50 },
+        { userId: childId, date: yesterday, totalTries: 4, correctTries: 4, timeEarnedSeconds: 20 },
+        {
+          userId: childId,
+          date: eightDaysAgo,
+          totalTries: 100,
+          correctTries: 100,
+          timeEarnedSeconds: 1000,
+        },
+      ])
+      .run();
+    ctx.db
+      .insert(matrixStats)
+      .values([
+        {
+          userId: childId,
+          factorA: 2,
+          factorB: 5,
+          correct: true,
+          timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+        },
+        {
+          userId: childId,
+          factorA: 20,
+          factorB: 20,
+          correct: true,
+          timestamp: new Date(),
+        },
+        {
+          userId: childId,
+          factorA: 3,
+          factorB: 3,
+          correct: false,
+          timestamp: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
+        },
+      ])
+      .run();
+
+    const response = await admin("GET", `/api/admin/users/${childId}/stats`);
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.user).toMatchObject({ id: childId, username: "child1" });
+    expect(typeof body.user.timeBankSeconds).toBe("number");
+    // the 8-day-old daily row is outside the window
+    expect(body.last7Days).toMatchObject({
+      attempts: 14,
+      correct: 11,
+      incorrect: 3,
+      earnedSeconds: 70,
+    });
+    // the 2-day-old matrix row is present, the 8-day-old one is gone
+    const cell = body.heatmap.find(
+      (entry: { a: number; b: number }) => entry.a === 2 && entry.b === 5,
+    );
+    expect(cell).toMatchObject({ tries: 1, correct: 1, accuracy: 1, color: "green" });
+    const stale = body.heatmap.find(
+      (entry: { a: number; b: number }) => entry.a === 3 && entry.b === 3,
+    );
+    expect(stale).toMatchObject({ tries: 0, color: "none" });
+    // (20, 20) is outside the child's assigned ranges and never appears
+    expect(
+      body.heatmap.some((entry: { a: number; b: number }) => entry.a === 20 && entry.b === 20),
+    ).toBe(false);
+  });
+
+  it("case 3: no activity renders an all-none heatmap and zero totals", async () => {
+    const created = await admin("POST", "/api/admin/users", { username: "quiet", pin: "5555" });
+    const id = created.json().id as string;
+    const easy = ctx.db.select().from(games).where(eq(games.name, "Easy Twos")).get();
+    await admin("PUT", `/api/admin/users/${id}/games`, { gameIds: [easy?.id ?? ""] });
+
+    const response = await admin("GET", `/api/admin/users/${id}/stats`);
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.last7Days).toMatchObject({
+      attempts: 0,
+      correct: 0,
+      incorrect: 0,
+      earnedSeconds: 0,
+    });
+    expect(body.heatmap.length).toBeGreaterThan(0);
+    expect(body.heatmap.every((cell: { color: string }) => cell.color === "none")).toBe(true);
+  });
+
+  it("case 5: a child token gets 403 and an unknown user gets 404", async () => {
+    const childLogin = await ctx.app.inject({
+      method: "POST",
+      url: "/api/auth/login",
+      payload: { username: "child1", pin: "2468" },
+    });
+    const childToken = childLogin.json().accessToken as string;
+
+    const child = ctx.db.select().from(users).where(eq(users.username, "child1")).get();
+    const forbidden = await ctx.app.inject({
+      method: "GET",
+      url: `/api/admin/users/${child?.id ?? ""}/stats`,
+      headers: { authorization: `Bearer ${childToken}` },
+    });
+    expect(forbidden.statusCode).toBe(403);
+
+    const unknown = await admin("GET", "/api/admin/users/u-nope/stats");
+    expect(unknown.statusCode).toBe(404);
+    expect(unknown.json().error.code).toBe("NOT_FOUND");
+
+    const anonymous = await ctx.app.inject({
+      method: "GET",
+      url: `/api/admin/users/${child?.id ?? ""}/stats`,
+    });
+    expect(anonymous.statusCode).toBe(401);
+  });
+});

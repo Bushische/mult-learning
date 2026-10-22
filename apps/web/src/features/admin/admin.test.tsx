@@ -138,6 +138,22 @@ function installServer(): { state: ServerState; stub: ApiStub } {
     "GET /admin/games": () => ({ data: GAMES }),
     "GET /admin/leaderboard": () => ({ data: state.leaderboard }),
     "GET /admin/stats/daily": () => ({ data: state.daily }),
+    "GET /admin/users/:id/stats": (call) => {
+      const id = call.url.split("/").slice(-2, -1)[0] as string;
+      if (id !== "u-child1") {
+        return { status: 404, data: { error: { code: "NOT_FOUND", message: "nope" } } };
+      }
+      return {
+        data: {
+          user: { id: "u-child1", username: "child1", timeBankSeconds: 45 },
+          heatmap: [
+            { a: 2, b: 5, tries: 1, correct: 1, accuracy: 1, color: "green" },
+            { a: 2, b: 6, tries: 0, correct: 0, accuracy: null, color: "none" },
+          ],
+          last7Days: { attempts: 14, correct: 11, incorrect: 3, earnedSeconds: 70 },
+        },
+      };
+    },
     "POST /admin/users": (call) => {
       const body = call.body as { username: string; pin: string; role?: "admin" | "user" };
       if (state.users.some((user) => user.username === body.username)) {
@@ -420,5 +436,19 @@ describe("T19 — child stats page links", () => {
     });
     renderApp("/admin/users/u-child1/stats");
     expect(await screen.findByTestId("user-grid")).toBeInTheDocument();
+  });
+});
+
+describe("T20 — child stats heatmap + week summary", () => {
+  it("case 6: the page renders the four totals and the heatmap from the endpoint", async () => {
+    installServer();
+    renderApp("/admin/users/u-child1/stats");
+
+    expect(await screen.findByTestId("week-attempts")).toHaveTextContent("Attempts: 14");
+    expect(screen.getByTestId("week-correct")).toHaveTextContent("Correct: 11");
+    expect(screen.getByTestId("week-incorrect")).toHaveTextContent("Incorrect: 3");
+    expect(screen.getByTestId("week-earned")).toHaveTextContent("Earned: 1:10");
+    expect(screen.getByTestId("cell-2-5")).toHaveAttribute("data-color", "green");
+    expect(screen.getByTestId("cell-2-6")).toHaveAttribute("data-color", "none");
   });
 });

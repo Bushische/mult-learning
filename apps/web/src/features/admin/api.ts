@@ -1,12 +1,14 @@
 import {
   type AdminDailyRow,
   type AdminUser,
+  type AdminUserStatsResponse,
   type CreateUserRequest,
   type Game,
   type LeaderboardResponse,
   type UpdateUserRequest,
   adminDailyRowsSchema,
   adminUserSchema,
+  adminUserStatsResponseSchema,
   adminUsersListSchema,
   assignGamesRequestSchema,
   createUserRequestSchema,
@@ -59,4 +61,8 @@ export function assignAdminGames(id: string, gameIds: string[]): Promise<string[
 
 export function resetAdminUser(id: string): Promise<void> {
   return api.post<void>(`/admin/users/${id}/reset`);
+}
+
+export function fetchAdminUserStats(id: string): Promise<AdminUserStatsResponse> {
+  return api.get<AdminUserStatsResponse>(`/admin/users/${id}/stats`, adminUserStatsResponseSchema);
 }

@@ -1,16 +1,18 @@
 import { Link, useParams } from "react-router-dom";
 import { AppHeader } from "../../dashboard/components/AppHeader";
+import { HeatmapGrid } from "../../dashboard/components/HeatmapGrid";
 import { formatDuration } from "../../dashboard/lib/format";
-import { useAdminGames, useAdminUsers } from "../hooks/useAdminData";
+import { useAdminGames, useAdminUserStats, useAdminUsers } from "../hooks/useAdminData";
 
 /**
- * One child's stats page (shell for T20): username, current bank and assigned
- * games, plus `heatmap` / `week-summary` placeholders that T20 fills with data.
+ * One child's stats page: username, current bank, assigned games, the rolling
+ * 7-day heatmap and the 7-day usage totals.
  */
 export function UserStatsPage() {
   const { id } = useParams();
   const { data: users } = useAdminUsers();
   const { data: games } = useAdminGames();
+  const { data: stats } = useAdminUserStats(id);
 
   if (users === undefined) {
     return (
@@ -41,6 +43,7 @@ export function UserStatsPage() {
   }
 
   const assignedGames = (games ?? []).filter((game) => user.games.includes(game.id));
+  const summary = stats?.last7Days;
 
   return (
     <div className="min-h-screen">
@@ -65,11 +68,18 @@ export function UserStatsPage() {
             )}
           </div>
         </section>
-        <section className="rounded-2xl bg-white p-4 shadow-sm" data-testid="heatmap">
-          <h3 className="mb-2 text-lg font-bold">Heatmap</h3>
-        </section>
         <section className="rounded-2xl bg-white p-4 shadow-sm" data-testid="week-summary">
           <h3 className="mb-2 text-lg font-bold">Last 7 days</h3>
+          <ul className="flex flex-col gap-1">
+            <li data-testid="week-attempts">Attempts: {summary?.attempts ?? 0}</li>
+            <li data-testid="week-correct">Correct: {summary?.correct ?? 0}</li>
+            <li data-testid="week-incorrect">Incorrect: {summary?.incorrect ?? 0}</li>
+            <li data-testid="week-earned">Earned: {formatDuration(summary?.earnedSeconds ?? 0)}</li>
+          </ul>
+        </section>
+        <section className="rounded-2xl bg-white p-4 shadow-sm">
+          <h3 className="mb-2 text-lg font-bold">Heatmap</h3>
+          <HeatmapGrid cells={stats?.heatmap ?? []} />
         </section>
         <Link
           to="/admin"

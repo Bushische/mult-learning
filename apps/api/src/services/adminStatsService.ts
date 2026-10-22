@@ -2,6 +2,8 @@ import type { AdminDailyRow, LeaderboardRow } from "@mult/shared";
 import { and, eq, gte } from "drizzle-orm";
 import type { Db } from "../db/client.js";
 import { dailyStats, users } from "../db/schema.js";
+import { notFound } from "../errors.js";
+import { getHeatmap } from "./statsService.js";
 
 /** Number of days used by the leaderboard window (today included). */
 export const LEADERBOARD_WINDOW_DAYS = 7;
@@ -64,6 +66,34 @@ export function getLeaderboardToday(db: Db, now: Date = new Date()): Leaderboard
 /** Both leaderboard windows in one payload: today first, last 7 days second. */
 export function getLeaderboardWindows(db: Db, now: Date = new Date()) {
   return { today: getLeaderboardToday(db, now), last7Days: getLeaderboard(db, now) };
+}
+
+/**
+ * One child's stats for the admin page: identity + rolling 7-day heatmap +
+ * 7-day totals (`incorrect = attempts − correct`).
+ */
+export function getAdminUserStats(db: Db, userId: string, now: Date = new Date()) {
+  const user = db.select().from(users).where(eq(users.id, userId)).get();
+  if (!user) throw notFound("User not found");
+
+  const start = windowStartDate(now);
+  const rows = db
+    .select()
+    .from(dailyStats)
+    .where(and(eq(dailyStats.userId, userId), gte(dailyStats.date, start)))
+    .all();
+  const attempts = rows.reduce((sum, row) => sum + row.totalTries, 0);
+  const correct = rows.reduce((sum, row) => sum + row.correctTries, 0);
+  return {
+    user: { id: user.id, username: user.username, timeBankSeconds: user.timeBankSeconds },
+    heatmap: getHeatmap(db, userId, now).cells,
+    last7Days: {
+      attempts,
+      correct,
+      incorrect: attempts - correct,
+      earnedSeconds: rows.reduce((sum, row) => sum + row.timeEarnedSeconds, 0),
+    },
+  };
 }
 
 /** Daily overview for one day (default: today). */

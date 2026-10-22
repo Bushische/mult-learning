@@ -229,6 +229,25 @@ export const heatmapResponseSchema = z.object({
 });
 export type HeatmapResponse = z.infer<typeof heatmapResponseSchema>;
 
+export const userWeekSummarySchema = z.object({
+  attempts: z.number().int().min(0),
+  correct: z.number().int().min(0),
+  incorrect: z.number().int().min(0),
+  earnedSeconds: secondsSchema,
+});
+export type UserWeekSummary = z.infer<typeof userWeekSummarySchema>;
+
+export const adminUserStatsResponseSchema = z.object({
+  user: z.object({
+    id: idSchema,
+    username: usernameSchema,
+    timeBankSeconds: secondsSchema,
+  }),
+  heatmap: z.array(heatmapCellSchema),
+  last7Days: userWeekSummarySchema,
+});
+export type AdminUserStatsResponse = z.infer<typeof adminUserStatsResponseSchema>;
+
 export const dailyStatsSchema = z.object({
   date: dateSchema,
   totalTries: z.number().int().min(0),

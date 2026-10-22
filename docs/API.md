@@ -88,6 +88,7 @@
 | PUT /admin/users/:id/games | `{ "gameIds": [id] }` | 200 current assignment list |
 | POST /admin/users/:id/reset | — | 204; wipes `matrix_stats` + `daily_stats` for the user, zeroes time bank |
 | GET /admin/leaderboard | — | `{ "today": LeaderboardRow[], "last7Days": LeaderboardRow[] }` (each row unchanged: `userId, username, timeEarnedSeconds, accuracy`, ranked by earned desc per window). `today` = `daily_stats` rows with `date` = today (UTC); `last7Days` = rolling 7-day window |
+| GET /admin/users/:id/stats | — | `{ "user": { "id", "username", "timeBankSeconds" }, "heatmap": [HeatmapCell], "last7Days": { "attempts", "correct", "incorrect", "earnedSeconds" } }` (heatmap = rolling 7-day window over the child's assigned ranges; totals = `daily_stats` sums in the window); 404 unknown id |
 | GET /admin/stats/daily?date=YYYY-MM-DD (default today) | — | `[{ "userId", "username", "totalTries", "correctTries", "timeEarnedSeconds", "timeBankSeconds" }]` |
 | GET /admin/games | — | `Game[]` (all) |
 | POST /admin/games | `GameConfig` (see GET /games shape) | 201 game; 400 VALIDATION_ERROR on bad ranges (min ≤ max, factors 1..20, variantCount 3..6) |
