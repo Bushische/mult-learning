@@ -200,6 +200,8 @@ describe("T11 — dashboard", () => {
     expect(screen.queryByText("Hard Sevens")).toBeNull();
 
     await user.click(screen.getAllByRole("button", { name: "Let's Play!" })[0] as HTMLElement);
-    expect(await screen.findByText("Game g-easy")).toBeInTheDocument();
+    // the play screen opens with the chosen game
+    expect(await screen.findByTestId("question")).toBeInTheDocument();
+    expect(screen.getByTestId("header-username")).toHaveTextContent("child1");
   });
 });
