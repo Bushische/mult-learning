@@ -183,8 +183,11 @@ describe("T12 — play screen", () => {
     await startQuestion();
     const second = readFactors();
     const secondRight = second.a * second.b;
-    const wrong = secondRight + 1;
-    await user.click(screen.getByTestId(`answer-${wrong}`));
+    const wrongButton = screen
+      .getAllByTestId(/^answer-/)
+      .find((button) => button.textContent !== String(secondRight)) as HTMLElement;
+    const wrong = Number(wrongButton.textContent);
+    await user.click(wrongButton);
 
     expect(await screen.findByTestId("feedback")).toHaveTextContent(
       `The answer was ${secondRight}`,
@@ -236,7 +239,7 @@ describe("T12 — play screen", () => {
     expect(new Set(slots).size).toBeGreaterThan(1);
 
     // buildOptions never repeats the correct answer
-    const options = buildOptions(12, 4, random);
+    const options = buildOptions(3, 4, 4, random);
     expect(options).toHaveLength(4);
     expect(options.filter((value) => value === 12)).toHaveLength(1);
     expect(shuffle([1, 2, 3], random)).toHaveLength(3);
@@ -375,8 +378,11 @@ describe("T22 — play HUD bank line", () => {
     expect(screen.getByTestId("bank")).toHaveTextContent("Bank 0:03");
 
     const { a, b } = readFactors();
-    const wrong = a * b + 1;
-    await user.click(screen.getByTestId(`answer-${wrong}`));
+    const rightAnswer = a * b;
+    const wrongButton = screen
+      .getAllByTestId(/^answer-/)
+      .find((button) => button.textContent !== String(rightAnswer)) as HTMLElement;
+    await user.click(wrongButton);
     await screen.findByTestId("feedback");
 
     expect(screen.getByTestId("bank")).toHaveTextContent("Bank 0:00");

@@ -22,27 +22,68 @@ export function shuffle<T>(items: T[], rng: () => number = Math.random): T[] {
 }
 
 /**
- * Build the answer buttons: the correct answer + plausible distractors around it
- * (± small offsets, never the correct answer twice).
+ * Build the answer buttons: the correct answer plus plausible distractors.
+ * Candidates come from multiplication mistakes (`a·(b±1)`, `(a±1)·b`) and from
+ * proximity (`right ±1/±2/±10`, `10·a`, `10·b`), widened with further offsets
+ * when the table yields too few distinct values. Deduplicated, positive, never
+ * the correct answer; `variantCount − 1` distinct picks with the injected RNG.
  */
 export function buildOptions(
-  rightAnswer: number,
+  factorA: number,
+  factorB: number,
   variantCount: number,
   rng: () => number = Math.random,
 ): number[] {
+  const rightAnswer = factorA * factorB;
   const count = Math.max(2, Math.min(6, variantCount));
-  const offsets = [1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 10, -10];
-  const options = new Set<number>([rightAnswer]);
-  let index = 0;
-  while (options.size < count) {
-    const offset = offsets[index % offsets.length] as number;
-    index += 1;
-    const candidate = rightAnswer + offset;
-    if (candidate < 0 || options.has(candidate)) continue;
-    options.add(candidate);
-    if (index > 100) break;
+  const raw = [
+    factorA * (factorB - 1),
+    factorA * (factorB + 1),
+    (factorA - 1) * factorB,
+    (factorA + 1) * factorB,
+    rightAnswer - 1,
+    rightAnswer + 1,
+    rightAnswer - 2,
+    rightAnswer + 2,
+    rightAnswer - 10,
+    rightAnswer + 10,
+    10 * factorA,
+    10 * factorB,
+  ];
+  const seen = new Set<number>();
+  const pool: number[] = [];
+  for (const candidate of raw) {
+    if (!Number.isInteger(candidate) || candidate <= 0) continue;
+    if (candidate === rightAnswer || seen.has(candidate)) continue;
+    seen.add(candidate);
+    pool.push(candidate);
   }
-  return shuffle([...options], rng);
+  // Tiny tables (e.g. 1 × 1) yield fewer candidates than needed — top up
+  // with further offsets so the option count is always exact.
+  let step = 3;
+  while (pool.length < count - 1) {
+    for (const candidate of [rightAnswer - step, rightAnswer + step]) {
+      if (pool.length >= count - 1) break;
+      if (!Number.isInteger(candidate) || candidate <= 0) continue;
+      if (candidate === rightAnswer || seen.has(candidate)) continue;
+      seen.add(candidate);
+      pool.push(candidate);
+    }
+    step += 1;
+  }
+  const picked = shuffle(pool, rng).slice(0, count - 1);
+  // The set must not be solely right ±1/±2 when table neighbours exist:
+  // ensure at least one distractor differs by ≥ 3.
+  const hasFar = picked.some((value) => Math.abs(value - rightAnswer) >= 3);
+  if (!hasFar) {
+    const far = pool.filter(
+      (value) => Math.abs(value - rightAnswer) >= 3 && !picked.includes(value),
+    );
+    if (far.length > 0 && picked.length > 0) {
+      picked[Math.floor(rng() * picked.length)] = far[0] as number;
+    }
+  }
+  return shuffle([...picked, rightAnswer], rng);
 }
 
 /** All combinations the game allows (pinned list or the full range). */
@@ -69,6 +110,6 @@ export function generateQuestion(game: Game, rng: () => number = Math.random): Q
     factorA,
     factorB,
     rightAnswer,
-    options: buildOptions(rightAnswer, game.variantCount, rng),
+    options: buildOptions(factorA, factorB, game.variantCount, rng),
   };
 }
