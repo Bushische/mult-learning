@@ -3,13 +3,14 @@
 # Model: one spec file per task (docs/TASKS/TASK_<ID>.md), one log file per executed
 # task (docs/TASKS/EXECUTION_LOG_<ID>.md). PENDING = spec exists, no log file yet.
 # Usage:
-#   ./scripts/run-next-task.sh          # next unfinished task, one shot (default model: Muse Spark)
-#   ./scripts/run-next-task.sh T48      # (re)execute a specific task
+#   ./scripts/run-next-task.sh          # next unfinished task, one shot (default model: MiniMax M3.1 Flash Free)
+#   ./scripts/run-next-task.sh T1       # (re)execute a specific task
 #   ./scripts/run-next-task.sh --loop   # loop until failure or all tasks DONE
 #   ./scripts/run-next-task.sh --list   # show queue with statuses, no execution
 # Model selection (precedence: flag > $OPENCODE_MODEL > default):
+#   ./scripts/run-next-task.sh --minimax            # MiniMax shortcut (the default)
 #   ./scripts/run-next-task.sh --deepseek            # DeepSeek shortcut
-#   ./scripts/run-next-task.sh --spark T48           # Muse Spark shortcut (the default)
+#   ./scripts/run-next-task.sh --spark              # Muse Spark shortcut (legacy)
 #   ./scripts/run-next-task.sh --model <id> --loop   # any opencode model id
 #   OPENCODE_MODEL=<id> ./scripts/run-next-task.sh   # via environment
 set -euo pipefail
@@ -17,9 +18,10 @@ cd "$(dirname "$0")/.."
 
 PROJECT="mult-learning"
 TASKS_DIR="docs/TASKS"
+MODEL_DEFAULT_MINIMAX="opencode/minimax-m3.1-flash-free"
 MODEL_DEFAULT_SPARK="opencode/muse-spark-1.3-contributor-free"
 MODEL_DEEPSEEK="openrouter/deepseek/deepseek-chat"
-MODEL="${OPENCODE_MODEL:-$MODEL_DEFAULT_SPARK}"
+MODEL="${OPENCODE_MODEL:-$MODEL_DEFAULT_MINIMAX}"
 
 log_file() { # <task-id> -> path
   echo "$TASKS_DIR/EXECUTION_LOG_$1.md"
@@ -247,6 +249,9 @@ main() {
       --deepseek)
         MODEL="$MODEL_DEEPSEEK"; shift
         ;;
+      --minimax)
+        MODEL="$MODEL_DEFAULT_MINIMAX"; shift
+        ;;
       --spark)
         MODEL="$MODEL_DEFAULT_SPARK"; shift
         ;;
@@ -278,7 +283,7 @@ main() {
       run_one "$arg"
       ;;
     *)
-      echo "Usage: $0 [--model <id> | --deepseek | --spark] [--loop | --list | Tn]  (e.g. $0 --deepseek T1, $0 --loop)"
+      echo "Usage: $0 [--model <id> | --minimax | --deepseek | --spark] [--loop | --list | Tn]  (e.g. $0 --deepseek T1, $0 --loop)"
       exit 1
       ;;
   esac

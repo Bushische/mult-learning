@@ -10,12 +10,13 @@ Each task is one spec file `docs/TASKS/TASK_<ID>.md`; progress lives in `docs/TA
 
 ## Automated (recommended)
 ```bash
-./scripts/run-next-task.sh              # execute the next unfinished task (default: Muse Spark 1.3 Free via OpenCode Zen)
+./scripts/run-next-task.sh              # execute the next unfinished task (default: MiniMax M3.1 Flash Free)
 ./scripts/run-next-task.sh T5           # (re)execute a specific task
 ./scripts/run-next-task.sh --deepseek   # same, but with DeepSeek (openrouter/deepseek/deepseek-chat)
+./scripts/run-next-task.sh --minimax    # same, but explicitly with MiniMax (the default)
 ./scripts/run-next-task.sh --model <id> --loop  # any opencode model id, looping
 ./scripts/run-next-task.sh --list       # show queue with statuses, no execution
-OPENCODE_MODEL=<id> ./scripts/run-next-task.sh  # model override via env (a --model/--deepseek/--spark flag wins)
+OPENCODE_MODEL=<id> ./scripts/run-next-task.sh  # model override via env (a --model/--minimax/--deepseek/--spark flag wins)
 ```
 What the script does per task:
 1. Picks the first non-`DONE` spec in docs/TASKS/ (version-sorted ID order, skipping `BLOCKED`)
