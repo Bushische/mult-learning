@@ -53,6 +53,11 @@
 - Solo workflow on `main`: exactly **one commit per task**, made by the orchestrator
   (`scripts/run-next-task.sh`) only after `pnpm test && pnpm lint` pass.
 - The executing agent never runs `git commit` and never creates branches.
+- **Exception — single-session mode** (`./scripts/run-next-task.sh --single-session`,
+  prompt in docs/SINGLE_SESSION_PROMPT.md): there is no per-task orchestrator, so the agent
+  makes the per-task commit itself (`feat(Tn): title`), stamps its own sha into the task's
+  `- Commit:` log line and amends that same commit. Still exactly one commit per task,
+  never pushed, never a branch.
 
 ## Tests
 - Backend: vitest + supertest (Fastify `inject`); every endpoint ≥ happy path + 1 auth-failure case.

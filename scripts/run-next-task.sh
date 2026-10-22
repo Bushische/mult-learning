@@ -7,6 +7,8 @@
 #   ./scripts/run-next-task.sh T1       # (re)execute a specific task
 #   ./scripts/run-next-task.sh --loop   # loop until failure or all tasks DONE
 #   ./scripts/run-next-task.sh --list   # show queue with statuses, no execution
+#   ./scripts/run-next-task.sh --single-session  # ONE agent session for the whole queue
+#                          (the agent then commits per task itself — see docs/SINGLE_SESSION_PROMPT.md)
 # Model selection (precedence: flag > $OPENCODE_MODEL > default):
 #   ./scripts/run-next-task.sh --minimax            # MiniMax shortcut (the default)
 #   ./scripts/run-next-task.sh --deepseek            # DeepSeek shortcut
@@ -238,6 +240,52 @@ Finish with a short report (max 5 bullets): what was built, test results, anythi
   echo "==> $task DONE"
 }
 
+# extract_prompt <file> — the text between <!-- PROMPT-START --> and <!-- PROMPT-END -->.
+extract_prompt() {
+  sed -n '/<!-- PROMPT-START -->/,/<!-- PROMPT-END -->/p' "$1" | sed -e '1d' -e '$d'
+}
+
+# run_single_session — one agent session for the WHOLE queue (docs/SINGLE_SESSION_PROMPT.md).
+# The agent owns the per-task commits here; the orchestrator only runs it and re-verifies.
+run_single_session() {
+  local prompt_file="docs/SINGLE_SESSION_PROMPT.md"
+  if [ ! -f "$prompt_file" ]; then
+    echo "[!] Missing $prompt_file"
+    return 1
+  fi
+  local prompt
+  prompt="$(extract_prompt "$prompt_file")"
+  if [ -z "$prompt" ]; then
+    echo "[!] No prompt found between the PROMPT-START/PROMPT-END markers in $prompt_file"
+    return 1
+  fi
+
+  local -a attach=()
+  local f
+  for f in docs/CONTEXT.md docs/API.md docs/DATA_MODEL.md docs/CONVENTIONS.md docs/PROJECT.md \
+    docs/TASKS/README.md; do
+    [ -f "$f" ] && attach+=(-f "$f")
+  done
+  for f in "$TASKS_DIR"/TASK_*.md; do
+    [ -e "$f" ] || continue
+    attach+=(-f "$f")
+  done
+
+  echo "==> Single-session run: model $MODEL ($((${#attach[@]} / 2)) docs attached)"
+  if ! opencode run --auto -m "$MODEL" --title "$PROJECT single-session" "${attach[@]}" "$prompt"; then
+    echo "[!] Single-session agent exited with an error."
+    return 1
+  fi
+
+  echo "==> Verifying final tree"
+  if ! verify; then
+    echo "[!] Verification FAILED — inspect the tree; nothing was committed by the orchestrator."
+    return 1
+  fi
+  echo "==> Recent commits:"
+  git log --oneline -20
+}
+
 main() {
   # Leading model flags (flag > $OPENCODE_MODEL > default).
   while [ $# -gt 0 ]; do
@@ -270,6 +318,9 @@ main() {
         run_one "$task" || exit $?
       done
       ;;
+    --single-session)
+      run_single_session
+      ;;
     --list)
       list_queue
       ;;
@@ -283,7 +334,8 @@ main() {
       run_one "$arg"
       ;;
     *)
-      echo "Usage: $0 [--model <id> | --minimax | --deepseek | --spark] [--loop | --list | Tn]  (e.g. $0 --deepseek T1, $0 --loop)"
+      echo "Usage: $0 [--model <id> | --minimax | --deepseek | --spark] [--loop | --single-session | --list | Tn]"
+      echo "       (e.g. $0 --deepseek T1, $0 --loop, $0 --single-session)"
       exit 1
       ;;
   esac

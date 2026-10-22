@@ -42,12 +42,19 @@ log (`EXECUTION_LOG_<ID>.md`: status, date, **commit**, summary of changes).
 ./scripts/run-next-task.sh T1       # (re)execute a specific task
 ./scripts/run-next-task.sh --loop   # chain agents until failure or all tasks DONE
 ./scripts/run-next-task.sh --model <id>   # any opencode model id
+./scripts/run-next-task.sh --single-session  # ONE agent session for the WHOLE queue
 ```
 
 Each task: fresh agent session → implementation → verified gate (`pnpm install`, `pnpm lint`,
 `pnpm test`, log integrity) → exactly **one commit** (`feat(Tn): title`). The agent never
 commits; the orchestrator does. `docs/TASKS/EXECUTION_LOG_<ID>.md` tracks status/date/commit
 and a one-line summary of changes.
+
+**Single-session mode** (`--single-session`, prompt in `docs/SINGLE_SESSION_PROMPT.md`) runs
+the entire queue in one agent session: the digest, contracts and all specs are attached up
+front (no re-reading), a scratchpad (`local-data/session-state.md`, gitignored) survives
+context compaction, the gate runs after every task, and the agent commits per task itself.
+Tradeoff: no fresh-context review per task — use the standard mode when you want that.
 
 Requires: `opencode` CLI, pnpm (`corepack enable`), Docker. Task-writing workflow lives in
 `docs/TASKS/README.md`; the two opencode skills are `task-create` (spec authoring) and

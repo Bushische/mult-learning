@@ -80,4 +80,10 @@ laptop, no CI/CD. Vision: docs/TASK.md; screens: docs/PROJECT.md.
   note); the orchestrator stamps `- Commit:` after its one commit.
 - Queue: first non-DONE spec in `docs/TASKS/` (version-sorted ID order, `BLOCKED` skipped);
   `PENDING` = spec exists with no log file yet.
+- **Single-session mode** (`./scripts/run-next-task.sh --single-session`, prompt:
+  docs/SINGLE_SESSION_PROMPT.md): ONE agent session executes the whole queue — it reads the
+  digest/contracts/specs once (attached via `-f`), keeps a scratchpad in
+  `local-data/session-state.md` for compaction, runs the gate after every task, and commits
+  per task itself (`feat(Tn): title` + `- Commit:` stamp + amend). The orchestrator only
+  runs the session and re-verifies the final tree.
 - Verify cheaply during the edit loop (touched files only), full gate once at the end.
