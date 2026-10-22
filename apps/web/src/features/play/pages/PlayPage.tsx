@@ -178,7 +178,12 @@ export function PlayPage({ gameId, rollDurationMs, questionSeconds }: PlayPagePr
               {tries} answered
             </span>
           </div>
-          <CountdownBar remaining={countdown.remaining} total={seconds * 1000} />
+          <CountdownBar
+            remaining={countdown.remaining}
+            total={seconds * 1000}
+            baseTimeReward={game.baseTimeReward}
+            questionSeconds={game.questionSeconds}
+          />
         </div>
 
         <SlotDisplay a={roll.a} b={roll.b} done={phase === "question" || phase === "feedback"} />

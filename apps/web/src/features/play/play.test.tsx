@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "../../test/setup";
@@ -7,6 +7,7 @@ import type { Game } from "@mult/shared";
 import { computeRewardSeconds } from "@mult/shared";
 import { useAuthStore } from "../../stores/auth-store";
 import { createApiStub, renderApp, resetSession } from "../../test/harness";
+import { CountdownBar } from "./components/CountdownBar";
 import { buildOptions, generateQuestion, shuffle } from "./lib/question";
 import { createSeededRng, setRng } from "./lib/random";
 
@@ -444,5 +445,56 @@ describe("T23 — time-decayed reward", () => {
     // decayed reward 5, not the max 10
     expect(screen.getByTestId("bank")).toHaveTextContent("Bank 0:05");
     expect(screen.getByTestId("session-earned")).toHaveTextContent("session +0:05 earned");
+  });
+});
+
+describe("T24 — earning progress bar", () => {
+  const bar = { total: 15000, baseTimeReward: 10, questionSeconds: 15 };
+
+  it("case 1: at remaining = total the current value equals the max at the right edge", () => {
+    render(<CountdownBar remaining={15000} {...bar} />);
+    expect(screen.getByTestId("earning-current")).toHaveTextContent("+0:10");
+    expect(screen.getByTestId("earning-current").style.left).toBe("100%");
+  });
+
+  it("case 2: halfway through, the current value follows the T23 formula between min and max", () => {
+    render(<CountdownBar remaining={7500} {...bar} />);
+    // round(10 * (15000 − 7500) / (15000 − 3000)) = 6
+    expect(screen.getByTestId("earning-current")).toHaveTextContent("+0:06");
+    expect(screen.getByTestId("earning-current").style.left).toBe("60%");
+  });
+
+  it("case 3: at remaining = 0 the current value is +0:00 at the left edge", () => {
+    render(<CountdownBar remaining={0} {...bar} />);
+    expect(screen.getByTestId("earning-current")).toHaveTextContent("+0:00");
+    expect(screen.getByTestId("earning-current").style.left).toBe("0%");
+  });
+
+  it("case 4: the labels render as clock values with an accessible summary", () => {
+    render(<CountdownBar remaining={7500} {...bar} />);
+    expect(screen.getByTestId("earning-min")).toHaveTextContent("min +0:00");
+    expect(screen.getByTestId("earning-max")).toHaveTextContent("max +0:10");
+    const label = screen.getByTestId("countdown").getAttribute("aria-label") ?? "";
+    expect(label).toContain("+0:06");
+    expect(label).toContain("+0:10");
+    expect(label).toContain("+0:00");
+  });
+
+  it("case 5: the bar still shrinks with the countdown", () => {
+    const { unmount } = render(<CountdownBar remaining={15000} {...bar} />);
+    expect(screen.getByTestId("countdown-fill").style.width).toBe("100%");
+    unmount();
+    render(<CountdownBar remaining={0} {...bar} />);
+    expect(screen.getByTestId("countdown-fill").style.width).toBe("0%");
+  });
+
+  it("the live bar starts at the max earning when the question opens", async () => {
+    bank = 0;
+    apiStub();
+    renderApp("/play/g-easy");
+    await startQuestion();
+
+    expect(screen.getByTestId("earning-current")).toHaveTextContent("+0:10");
+    expect(screen.getByTestId("earning-max")).toHaveTextContent("max +0:10");
   });
 });
