@@ -6,6 +6,7 @@ import { type AppConfig, loadConfig } from "./config.js";
 import { type Db, createDb } from "./db/client.js";
 import { registerErrorHandler } from "./plugins/error-handler.js";
 import { authRoutes } from "./routes/auth.js";
+import { gameRoutes } from "./routes/games.js";
 import { userRoutes } from "./routes/users.js";
 
 export const healthResponseSchema = z.object({ status: z.literal("ok") });
@@ -46,6 +47,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
 
   await app.register(userRoutes, { prefix: "/api" });
   await app.register(authRoutes, { prefix: "/api/auth" });
+  await app.register(gameRoutes, { prefix: "/api" });
 
   return app;
 }

@@ -1,0 +1,19 @@
+import type { FastifyInstance } from "fastify";
+import { gamesListSchema } from "packages/shared";
+import { requireAuth } from "../plugins/auth.js";
+import { listAllGames, listGamesForUser } from "../services/gameService.js";
+
+/** Game routes — mounted under `/api`. */
+export async function gameRoutes(app: FastifyInstance): Promise<void> {
+  /**
+   * `GET /games` — a `user` sees only the games assigned to them,
+   * an `admin` sees every game.
+   */
+  app.get("/games", { preHandler: requireAuth }, async (request) => {
+    const authUser = request.authUser;
+    if (!authUser) return gamesListSchema.parse([]);
+    const list =
+      authUser.role === "admin" ? listAllGames(app.db) : listGamesForUser(app.db, authUser.id);
+    return gamesListSchema.parse(list);
+  });
+}
