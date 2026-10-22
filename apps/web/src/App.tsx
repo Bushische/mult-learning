@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminPage } from "./features/admin/pages/AdminPage";
+import { UserStatsPage } from "./features/admin/pages/UserStatsPage";
 import { LoginPage } from "./features/auth/pages/LoginPage";
 import { DashboardPage } from "./features/dashboard/pages/DashboardPage";
 import { PlayPage } from "./features/play/pages/PlayPage";
@@ -30,6 +31,14 @@ export function App() {
         element={
           <ProtectedRoute adminOnly>
             <AdminPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/users/:id/stats"
+        element={
+          <ProtectedRoute adminOnly>
+            <UserStatsPage />
           </ProtectedRoute>
         }
       />

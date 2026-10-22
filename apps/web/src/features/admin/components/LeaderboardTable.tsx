@@ -1,4 +1,5 @@
 import type { LeaderboardRow } from "@mult/shared";
+import { Link } from "react-router-dom";
 import { formatDuration } from "../../dashboard/lib/format";
 
 interface LeaderboardTableProps {
@@ -40,7 +41,11 @@ export function LeaderboardTable({ rows, title, testId }: LeaderboardTableProps)
               className="border-b border-slate-100"
               data-testid={`${testId}-row-${row.username}`}
             >
-              <td className="py-2 font-semibold">{row.username}</td>
+              <td className="py-2 font-semibold">
+                <Link to={`/admin/users/${row.userId}/stats`} className="text-sky-700 underline">
+                  {row.username}
+                </Link>
+              </td>
               <td className="py-2" data-testid={`${testId}-score-${row.username}`}>
                 {formatDuration(row.timeEarnedSeconds)} ·{" "}
                 {row.accuracy === null ? 0 : Math.round(row.accuracy * 100)}%

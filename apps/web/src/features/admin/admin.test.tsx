@@ -359,3 +359,66 @@ describe("T13 — admin panel", () => {
     expect(row).not.toHaveTextContent("+45s");
   });
 });
+
+describe("T19 — child stats page links", () => {
+  it("case 1: clicking a name in the today table opens the child's stats page", async () => {
+    installServer();
+    const user = userEvent.setup();
+    renderApp("/admin");
+
+    const today = await screen.findByTestId("leaderboard-today");
+    const link = await within(today).findByRole("link", { name: "child1" });
+    await user.click(link);
+
+    expect(await screen.findByTestId("user-stats-name")).toHaveTextContent("child1");
+    expect(screen.getByTestId("back-to-admin")).toBeInTheDocument();
+  });
+
+  it("case 2: clicking a name in the 7-day table opens the same page", async () => {
+    installServer();
+    const user = userEvent.setup();
+    renderApp("/admin");
+
+    const week = await screen.findByTestId("leaderboard-7days");
+    const link = await within(week).findByRole("link", { name: "child1" });
+    await user.click(link);
+
+    expect(await screen.findByTestId("user-stats-name")).toHaveTextContent("child1");
+  });
+
+  it("case 3: a deep link renders the name and bank, the back link returns to /admin", async () => {
+    installServer();
+    const user = userEvent.setup();
+    renderApp("/admin/users/u-child1/stats");
+
+    expect(await screen.findByTestId("user-stats-name")).toHaveTextContent("child1");
+    expect(screen.getByTestId("user-stats-bank")).toHaveTextContent("0:45 bank");
+
+    await user.click(screen.getByTestId("back-to-admin"));
+    expect(await screen.findByTestId("leaderboard-today")).toBeInTheDocument();
+  });
+
+  it("case 4: an unknown user id renders 'User not found'", async () => {
+    installServer();
+    renderApp("/admin/users/u-nope/stats");
+
+    expect(await screen.findByTestId("user-not-found")).toHaveTextContent("User not found");
+  });
+
+  it("case 5: a logged-out visitor lands on login, a child is redirected out", async () => {
+    installServer();
+
+    resetSession();
+    const first = renderApp("/admin/users/u-child1/stats");
+    expect(await screen.findByTestId("user-grid")).toBeInTheDocument();
+    first.unmount();
+
+    resetSession();
+    useAuthStore.setState({
+      accessToken: "token-child1",
+      user: { id: "u-child1", username: "child1", role: "user" },
+    });
+    renderApp("/admin/users/u-child1/stats");
+    expect(await screen.findByTestId("user-grid")).toBeInTheDocument();
+  });
+});
