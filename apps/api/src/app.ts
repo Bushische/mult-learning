@@ -5,6 +5,8 @@ import { z } from "zod";
 import { type AppConfig, loadConfig } from "./config.js";
 import { type Db, createDb } from "./db/client.js";
 import { registerErrorHandler } from "./plugins/error-handler.js";
+import { authRoutes } from "./routes/auth.js";
+import { userRoutes } from "./routes/users.js";
 
 export const healthResponseSchema = z.object({ status: z.literal("ok") });
 export type HealthResponse = z.infer<typeof healthResponseSchema>;
@@ -28,6 +30,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   });
 
   app.decorate("db", db);
+  app.decorate("config", config);
 
   await app.register(cors, {
     origin: config.corsOrigins ?? true,
@@ -40,6 +43,9 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   const health = async (): Promise<HealthResponse> => healthResponseSchema.parse({ status: "ok" });
   app.get("/health", health);
   app.get("/api/health", health);
+
+  await app.register(userRoutes, { prefix: "/api" });
+  await app.register(authRoutes, { prefix: "/api/auth" });
 
   return app;
 }

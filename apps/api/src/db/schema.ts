@@ -78,6 +78,26 @@ export const dailyStats = sqliteTable(
   (table) => [uniqueIndex("daily_stats_user_date_idx").on(table.userId, table.date)],
 );
 
+/**
+ * Rotating refresh tokens. Only the sha256 hash is stored; the raw value lives
+ * in the HttpOnly cookie (docs/API.md — the sessions section).
+ */
+export const refreshTokens = sqliteTable(
+  "refresh_tokens",
+  {
+    id: text("id").primaryKey().$defaultFn(createId),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull().unique(),
+    expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [index("refresh_tokens_user_idx").on(table.userId)],
+);
+
 export const matrixStats = sqliteTable(
   "matrix_stats",
   {
@@ -100,3 +120,4 @@ export type NewGameRow = typeof games.$inferInsert;
 export type DailyStatRow = typeof dailyStats.$inferSelect;
 export type MatrixStatRow = typeof matrixStats.$inferSelect;
 export type UserGameAssignmentRow = typeof userGameAssignments.$inferSelect;
+export type RefreshTokenRow = typeof refreshTokens.$inferSelect;

@@ -1,17 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildApp } from "./app.js";
-import type { AppConfig } from "./config.js";
 import { FastifyHttpError } from "./errors.js";
-
-const testConfig: AppConfig = {
-  nodeEnv: "test",
-  host: "127.0.0.1",
-  port: 0,
-  logLevel: "silent",
-  jwtSecret: "test-secret-value",
-  databasePath: ":memory:",
-  corsOrigins: null,
-};
+import { testConfig } from "./test/helper.js";
 
 describe("T2 — api bootstrap", () => {
   it("case 1: GET /health returns 200 {status:'ok'} without auth", async () => {
