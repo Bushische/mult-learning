@@ -280,6 +280,18 @@ describe("T14 — admin game studio", () => {
     view.unmount();
   });
 
+  it("T21 case 1–3: the admin game list reads 'N options' with unchanged economics", async () => {
+    installServer();
+    const user = userEvent.setup();
+    renderApp("/admin");
+    await openGamesTab(user);
+
+    const row = await screen.findByTestId("admin-game-Easy Twos");
+    expect(row).toHaveTextContent("3 options");
+    expect(row).toHaveTextContent("+10s / −5s");
+    expect(row).not.toHaveTextContent("3 answers");
+  });
+
   it("case 5: duplicating a game creates an independent copy", async () => {
     const { state, stub } = installServer();
     const user = userEvent.setup();

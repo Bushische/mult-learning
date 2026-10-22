@@ -24,7 +24,7 @@ export function GameList({ games, onEdit, onDuplicate, onDelete }: GameListProps
             <p className="font-bold">{game.name}</p>
             <p className="text-sm text-slate-500">
               {game.rangeA.min}–{game.rangeA.max} × {game.rangeB.min}–{game.rangeB.max} ·{" "}
-              {game.variantCount} answers · +{game.baseTimeReward}s / −{game.timePenalty}s
+              {game.variantCount} options · +{game.baseTimeReward}s / −{game.timePenalty}s
             </p>
           </div>
           <div className="flex gap-2">
