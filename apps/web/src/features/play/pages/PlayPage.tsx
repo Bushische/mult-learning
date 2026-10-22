@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppHeader } from "../../dashboard/components/AppHeader";
 import { useGames } from "../../dashboard/hooks/useGames";
+import { useMe } from "../../dashboard/hooks/useMe";
 import { formatDuration } from "../../dashboard/lib/format";
 import { submitAnswer } from "../api";
 import { AnswerButtons } from "../components/AnswerButtons";
@@ -46,8 +47,12 @@ export function PlayPage({ gameId, rollDurationMs, questionSeconds }: PlayPagePr
   const [tries, setTries] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
   const [bankAdded, setBankAdded] = useState(0);
-  const [bank, setBank] = useState(0);
+  const [bank, setBank] = useState<number | null>(null);
   const [lastCorrect, setLastCorrect] = useState<boolean | null>(null);
+  const { data: me } = useMe();
+  /** The authoritative bank comes from the answer responses; before the first
+   * answer fall back to the profile value so the cap line is correct at once. */
+  const displayedBank = bank ?? me?.timeBankSeconds ?? 0;
 
   const startQuestion = useCallback(() => {
     if (!game) return;
@@ -156,10 +161,13 @@ export function PlayPage({ gameId, rollDurationMs, questionSeconds }: PlayPagePr
       <AppHeader title={game.name} />
       <main className="mx-auto flex max-w-2xl flex-col gap-6 p-4">
         <div className="rounded-2xl bg-white p-4 shadow-sm">
-          <div className="mb-3 flex items-center justify-between">
-            <span className="text-sm text-slate-500" data-testid="bank">
-              Bank: {formatDuration(bank)}
-            </span>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3">
+            <p className="text-sm text-slate-500">
+              <span data-testid="bank">Bank {formatDuration(displayedBank)}</span>
+              <span data-testid="bank-max"> / {formatDuration(game.maxDailyTime)}</span>
+              {" · "}
+              <span data-testid="session-earned">session +{formatDuration(bankAdded)} earned</span>
+            </p>
             <span className="text-sm text-slate-500" data-testid="tries">
               {tries} answered
             </span>

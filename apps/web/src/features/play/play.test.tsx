@@ -321,3 +321,59 @@ describe("T12 — play screen", () => {
     expect(stub.calls.some((call) => call.url === "/api/answers")).toBe(false);
   });
 });
+
+describe("T22 — play HUD bank line", () => {
+  it("case 1: a game with cap 3600 and bank 45 renders 'Bank 0:45 / 1:00:00'", async () => {
+    bank = 45;
+    apiStub();
+    renderApp("/play/g-easy");
+    await startQuestion();
+
+    expect(screen.getByTestId("bank")).toHaveTextContent("Bank 0:45");
+    expect(screen.getByTestId("bank-max")).toHaveTextContent("/ 1:00:00");
+  });
+
+  it("case 2: a correct answer updates the bank and the session earned on the same line", async () => {
+    bank = 0;
+    apiStub();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderApp("/play/g-easy");
+    await startQuestion();
+
+    expect(screen.getByTestId("session-earned")).toHaveTextContent("session +0:00 earned");
+
+    const { a, b } = readFactors();
+    await user.click(screen.getByTestId(`answer-${a * b}`));
+    await screen.findByTestId("feedback");
+
+    expect(screen.getByTestId("bank")).toHaveTextContent("Bank 0:10");
+    expect(screen.getByTestId("session-earned")).toHaveTextContent("session +0:10 earned");
+  });
+
+  it("case 3: a wrong answer reduces the bank but never below '0:00 / <max>'", async () => {
+    bank = 3;
+    apiStub();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderApp("/play/g-easy");
+    await startQuestion();
+
+    expect(screen.getByTestId("bank")).toHaveTextContent("Bank 0:03");
+
+    const { a, b } = readFactors();
+    const wrong = a * b + 1;
+    await user.click(screen.getByTestId(`answer-${wrong}`));
+    await screen.findByTestId("feedback");
+
+    expect(screen.getByTestId("bank")).toHaveTextContent("Bank 0:00");
+    expect(screen.getByTestId("bank-max")).toHaveTextContent("/ 1:00:00");
+  });
+
+  it("case 4: the earned label is present so the left number is not mistaken for the cap", async () => {
+    bank = 0;
+    apiStub();
+    renderApp("/play/g-easy");
+    await startQuestion();
+
+    expect(screen.getByTestId("session-earned")).toHaveTextContent("earned");
+  });
+});
