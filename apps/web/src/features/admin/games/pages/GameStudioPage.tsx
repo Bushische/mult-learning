@@ -35,6 +35,7 @@ export function GameStudioPage() {
       baseTimeReward: game.baseTimeReward,
       timePenalty: game.timePenalty,
       maxDailyTime: game.maxDailyTime,
+      questionSeconds: game.questionSeconds,
       hints: game.hints,
     }).then(refresh);
   };

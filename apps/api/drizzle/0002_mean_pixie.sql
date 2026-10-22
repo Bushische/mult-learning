@@ -1,0 +1,1 @@
+ALTER TABLE `games` ADD `question_seconds` integer DEFAULT 15 NOT NULL;

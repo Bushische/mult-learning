@@ -19,6 +19,7 @@ const GAMES: Game[] = [
     baseTimeReward: 10,
     timePenalty: 5,
     maxDailyTime: 3600,
+    questionSeconds: 15,
     hints: [],
   },
   {
@@ -31,6 +32,7 @@ const GAMES: Game[] = [
     baseTimeReward: 10,
     timePenalty: 5,
     maxDailyTime: 3600,
+    questionSeconds: 15,
     hints: [],
   },
 ];

@@ -34,6 +34,7 @@ export function createGame(db: Db, config: GameConfig): Game {
       baseTimeReward: config.baseTimeReward,
       timePenalty: config.timePenalty,
       maxDailyTime: config.maxDailyTime,
+      questionSeconds: config.questionSeconds,
       hintsJson: JSON.stringify(config.hints),
       createdAt: now,
       updatedAt: now,
@@ -66,6 +67,7 @@ export function updateGame(db: Db, id: string, patch: GamePatch): Game {
   if (patch.baseTimeReward !== undefined) updates.baseTimeReward = patch.baseTimeReward;
   if (patch.timePenalty !== undefined) updates.timePenalty = patch.timePenalty;
   if (patch.maxDailyTime !== undefined) updates.maxDailyTime = patch.maxDailyTime;
+  if (patch.questionSeconds !== undefined) updates.questionSeconds = patch.questionSeconds;
   if (patch.hints !== undefined) updates.hintsJson = JSON.stringify(patch.hints);
 
   const updated = db.update(games).set(updates).where(eq(games.id, row.id)).returning().get();

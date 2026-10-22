@@ -124,7 +124,7 @@ describe("T7 — stats read API", () => {
       method: "POST",
       url: "/api/answers",
       headers: { authorization: `Bearer ${token}` },
-      payload: { gameId, factorA: 2, factorB: 3, chosen: 6 },
+      payload: { gameId, factorA: 2, factorB: 3, chosen: 6, elapsedMs: 0 },
     });
 
     const response = await ctx.app.inject({

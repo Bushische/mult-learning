@@ -20,6 +20,7 @@ interface FormState {
   baseTimeReward: number;
   timePenalty: number;
   maxDailyTime: number;
+  questionSeconds: number;
   allowedCombinations: [number, number][];
   hints: { factor: number; text: string }[];
 }
@@ -35,6 +36,7 @@ function emptyForm(): FormState {
     baseTimeReward: 10,
     timePenalty: 5,
     maxDailyTime: 3600,
+    questionSeconds: 15,
     allowedCombinations: [],
     hints: [],
   };
@@ -51,6 +53,7 @@ function formOf(game: Game): FormState {
     baseTimeReward: game.baseTimeReward,
     timePenalty: game.timePenalty,
     maxDailyTime: game.maxDailyTime,
+    questionSeconds: game.questionSeconds,
     allowedCombinations: game.allowedCombinations ? [...game.allowedCombinations] : [],
     hints: game.hints.map((hint) => ({ ...hint })),
   };
@@ -84,6 +87,7 @@ export function GameStudioForm({ editing, onSubmit, onCancelEdit }: GameStudioFo
       baseTimeReward: form.baseTimeReward,
       timePenalty: form.timePenalty,
       maxDailyTime: form.maxDailyTime,
+      questionSeconds: form.questionSeconds,
       hints: form.hints,
     };
     const parsed = gameConfigSchema.safeParse(config);
@@ -246,10 +250,21 @@ export function GameStudioForm({ editing, onSubmit, onCancelEdit }: GameStudioFo
             className="min-h-[44px] rounded-xl border border-slate-300 px-3"
           />
         </label>
+        <label className="flex flex-col text-sm">
+          Seconds per question
+          <input
+            aria-label="Seconds per question"
+            type="number"
+            value={form.questionSeconds}
+            onChange={(event) => patch({ questionSeconds: Number(event.target.value) })}
+            className="min-h-[44px] rounded-xl border border-slate-300 px-3"
+          />
+        </label>
       </div>
       {error("baseTimeReward")}
       {error("timePenalty")}
       {error("maxDailyTime")}
+      {error("questionSeconds")}
 
       <fieldset className="flex flex-col gap-2">
         <legend className="text-sm font-semibold text-slate-600">Magic rules</legend>

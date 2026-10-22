@@ -1,4 +1,5 @@
 import type { AnswerRequest, AnswerResponse } from "@mult/shared";
+import { computeRewardSeconds } from "@mult/shared";
 import { and, eq } from "drizzle-orm";
 import type { Db } from "../db/client.js";
 import { dailyStats, games, matrixStats, userGameAssignments, users } from "../db/schema.js";
@@ -27,7 +28,12 @@ export function submitAnswer(db: Db, userId: string, request: AnswerRequest): An
 
   const rightAnswer = request.factorA * request.factorB;
   const correct = request.chosen !== null && request.chosen === rightAnswer;
-  const rawDelta = correct ? game.baseTimeReward : -game.timePenalty;
+  const reward = computeRewardSeconds({
+    baseTimeReward: game.baseTimeReward,
+    questionSeconds: game.questionSeconds,
+    elapsedMs: request.elapsedMs,
+  });
+  const rawDelta = correct ? reward : -game.timePenalty;
 
   return db.transaction((tx) => {
     const user = tx.select().from(users).where(eq(users.id, userId)).get();

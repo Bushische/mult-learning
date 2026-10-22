@@ -186,7 +186,7 @@ describe("T8 — admin users", () => {
       method: "POST",
       url: "/api/answers",
       headers: { authorization: `Bearer ${token}` },
-      payload: { gameId, factorA: 2, factorB: 3, chosen: 6 },
+      payload: { gameId, factorA: 2, factorB: 3, chosen: 6, elapsedMs: 0 },
     });
 
     const reset = await admin("POST", `/api/admin/users/${child?.id ?? ""}/reset`);
@@ -217,7 +217,7 @@ describe("T8 — admin users", () => {
       method: "POST",
       url: "/api/answers",
       headers: { authorization: `Bearer ${token}` },
-      payload: { gameId, factorA: 2, factorB: 3, chosen: 6 },
+      payload: { gameId, factorA: 2, factorB: 3, chosen: 6, elapsedMs: 0 },
     });
     expect(after.json()).toMatchObject({ timeBankSeconds: 10, timeDelta: 10 });
   });

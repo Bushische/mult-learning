@@ -106,6 +106,8 @@ export const gameSchema = z.object({
   baseTimeReward: secondsSchema,
   timePenalty: secondsSchema,
   maxDailyTime: secondsSchema,
+  /** Seconds per question (the countdown length); the reward decays over it. */
+  questionSeconds: z.number().int().min(5).max(60),
   hints: z.array(gameHintSchema),
 });
 export type Game = z.infer<typeof gameSchema>;
@@ -120,6 +122,7 @@ export const gameConfigSchema = z.object({
   baseTimeReward: secondsSchema,
   timePenalty: secondsSchema,
   maxDailyTime: secondsSchema,
+  questionSeconds: z.number().int().min(5).max(60).default(15),
   hints: z.array(gameHintSchema),
 });
 export type GameConfig = z.infer<typeof gameConfigSchema>;
@@ -135,6 +138,7 @@ export const gamePatchSchema = z
     baseTimeReward: gameConfigSchema.shape.baseTimeReward.optional(),
     timePenalty: gameConfigSchema.shape.timePenalty.optional(),
     maxDailyTime: gameConfigSchema.shape.maxDailyTime.optional(),
+    questionSeconds: z.number().int().min(5).max(60).optional(),
     hints: z.array(gameHintSchema).optional(),
   })
   .refine((patch) => Object.keys(patch).length > 0, {
@@ -179,6 +183,8 @@ export const answerRequestSchema = z.object({
   factorB: factorSchema,
   /** `null` = the child ran out of time. */
   chosen: z.number().int().min(0).nullable(),
+  /** Milliseconds from the countdown start to the tap (clamped server-side). */
+  elapsedMs: z.number().int().min(0),
 });
 export type AnswerRequest = z.infer<typeof answerRequestSchema>;
 
@@ -189,6 +195,32 @@ export const answerResponseSchema = z.object({
   timeDelta: z.number().int(),
 });
 export type AnswerResponse = z.infer<typeof answerResponseSchema>;
+
+/** Grace period: a correct answer within the first 3 seconds pays the full reward. */
+export const REWARD_GRACE_MS = 3000;
+
+export interface RewardInput {
+  baseTimeReward: number;
+  questionSeconds: number;
+  elapsedMs: number;
+}
+
+/**
+ * Time-decayed reward for a correct answer: full `baseTimeReward` while
+ * `elapsedMs` is inside the grace period, then a linear shrink to 0 at the
+ * end of the question. Clamped to `[0, baseTimeReward]`, never negative.
+ */
+export function computeRewardSeconds({
+  baseTimeReward,
+  questionSeconds,
+  elapsedMs,
+}: RewardInput): number {
+  const totalMs = questionSeconds * 1000;
+  const elapsed = Math.min(Math.max(elapsedMs, 0), totalMs);
+  if (elapsed <= REWARD_GRACE_MS || totalMs <= REWARD_GRACE_MS) return baseTimeReward;
+  const reward = Math.round((baseTimeReward * (totalMs - elapsed)) / (totalMs - REWARD_GRACE_MS));
+  return Math.min(Math.max(reward, 0), baseTimeReward);
+}
 
 /* ------------------------------------------------------------------ */
 /* Stats                                                               */

@@ -315,3 +315,33 @@ describe("T9 — admin games, leaderboard, daily overview", () => {
     expect(forbidden.statusCode).toBe(403);
   });
 });
+
+describe("T23 — questionSeconds contract", () => {
+  it("case 5: 4 and 61 are rejected, 5..60 accepted, omitted defaults to 15", async () => {
+    for (const questionSeconds of [4, 61]) {
+      const bad = await admin("POST", "/api/admin/games", { ...validGame, questionSeconds });
+      expect(bad.statusCode).toBe(400);
+      expect(bad.json().error.code).toBe("VALIDATION_ERROR");
+    }
+    for (const questionSeconds of [5, 60]) {
+      const ok = await admin("POST", "/api/admin/games", {
+        ...validGame,
+        name: `QS ${questionSeconds}`,
+        questionSeconds,
+      });
+      expect(ok.statusCode).toBe(201);
+      expect(ok.json()).toMatchObject({ questionSeconds });
+    }
+
+    const fresh = await admin("POST", "/api/admin/games", { ...validGame, name: "QS default" });
+    expect(fresh.statusCode).toBe(201);
+    expect(fresh.json()).toMatchObject({ questionSeconds: 15 });
+
+    const id = fresh.json().id as string;
+    const badPatch = await admin("PATCH", `/api/admin/games/${id}`, { questionSeconds: 61 });
+    expect(badPatch.statusCode).toBe(400);
+    const okPatch = await admin("PATCH", `/api/admin/games/${id}`, { questionSeconds: 20 });
+    expect(okPatch.statusCode).toBe(200);
+    expect(okPatch.json()).toMatchObject({ questionSeconds: 20 });
+  });
+});

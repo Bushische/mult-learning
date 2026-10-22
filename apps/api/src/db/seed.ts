@@ -18,6 +18,7 @@ export interface SeedGameSpec {
   rangeB: { min: number; max: number };
   variantCount: number;
   baseTimeReward: number;
+  questionSeconds: number;
   timePenalty: number;
   maxDailyTime: number;
   hints: { factor: number; text: string }[];
@@ -37,6 +38,7 @@ export const SEED_GAMES: SeedGameSpec[] = [
     rangeB: { min: 1, max: 4 },
     variantCount: 3,
     baseTimeReward: 10,
+    questionSeconds: 15,
     timePenalty: 5,
     maxDailyTime: 3600,
     hints: [],
@@ -47,6 +49,7 @@ export const SEED_GAMES: SeedGameSpec[] = [
     rangeB: { min: 1, max: 10 },
     variantCount: 3,
     baseTimeReward: 10,
+    questionSeconds: 15,
     timePenalty: 5,
     maxDailyTime: 3600,
     hints: [],
@@ -108,6 +111,7 @@ export function seedDatabase(db: Db): SeedResult {
         allowedCombinationsJson: null,
         variantCount: spec.variantCount,
         baseTimeReward: spec.baseTimeReward,
+        questionSeconds: spec.questionSeconds,
         timePenalty: spec.timePenalty,
         maxDailyTime: spec.maxDailyTime,
         hintsJson: JSON.stringify(spec.hints),

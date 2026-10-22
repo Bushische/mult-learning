@@ -1,5 +1,5 @@
 import type { Game } from "@mult/shared";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppHeader } from "../../dashboard/components/AppHeader";
 import { useGames } from "../../dashboard/hooks/useGames";
@@ -33,13 +33,14 @@ export function PlayPage({ gameId, rollDurationMs, questionSeconds }: PlayPagePr
   const navigate = useNavigate();
   const activeGameId = gameId ?? params.gameId ?? "";
   const rollMs = rollDurationMs ?? ROLL_DURATION_MS;
-  const seconds = questionSeconds ?? QUESTION_SECONDS;
 
   const { data: games } = useGames();
   const game: Game | undefined = useMemo(
     () => (games ?? []).find((entry) => entry.id === activeGameId),
     [games, activeGameId],
   );
+  /** The countdown length comes from the game; the prop is a test override. */
+  const seconds = questionSeconds ?? game?.questionSeconds ?? QUESTION_SECONDS;
 
   const [phase, setPhase] = useState<Phase>("rolling");
   const [question, setQuestion] = useState<Question | null>(null);
@@ -50,6 +51,8 @@ export function PlayPage({ gameId, rollDurationMs, questionSeconds }: PlayPagePr
   const [bank, setBank] = useState<number | null>(null);
   const [lastCorrect, setLastCorrect] = useState<boolean | null>(null);
   const { data: me } = useMe();
+  /** The countdown start of the current question (elapsedMs is measured from it). */
+  const questionStartedAt = useRef(0);
   /** The authoritative bank comes from the answer responses; before the first
    * answer fall back to the profile value so the cap line is correct at once. */
   const displayedBank = bank ?? me?.timeBankSeconds ?? 0;
@@ -77,6 +80,7 @@ export function PlayPage({ gameId, rollDurationMs, questionSeconds }: PlayPagePr
 
   useEffect(() => {
     if (phase === "rolling" && roll.done && question) {
+      questionStartedAt.current = Date.now();
       setPhase("question");
     }
   }, [phase, roll.done, question]);
@@ -85,12 +89,14 @@ export function PlayPage({ gameId, rollDurationMs, questionSeconds }: PlayPagePr
     async (value: number | null) => {
       if (!question || !game) return;
       setChosen(value);
+      const elapsedMs = Math.max(0, Date.now() - questionStartedAt.current);
       try {
         const result = await submitAnswer({
           gameId: game.id,
           factorA: question.factorA,
           factorB: question.factorB,
           chosen: value,
+          elapsedMs,
         });
         setBank(result.timeBankSeconds);
         if (result.timeDelta > 0) setBankAdded((total) => total + result.timeDelta);

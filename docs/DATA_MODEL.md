@@ -30,9 +30,10 @@ General rules (fixed, stack-level):
 | range_b_min / range_b_max | integer NOT NULL | factor B range, 1..20, min ≤ max |
 | allowed_combinations_json | text NULL | JSON `[[a,b],...]`; NULL = every combination inside the ranges |
 | variant_count | integer NOT NULL, default 3 | answer buttons N, 3..6 |
-| base_time_reward | integer NOT NULL | seconds added on a correct answer |
+| base_time_reward | integer NOT NULL | seconds added on a correct answer (before time decay) |
 | time_penalty | integer NOT NULL | seconds deducted on wrong/timeout |
 | max_daily_time | integer NOT NULL, default 3600 | time bank cap (s) |
+| question_seconds | integer NOT NULL, default 15 | countdown length per question (s), 5..60 |
 | hints_json | text NOT NULL, default `"[]"` | JSON `[{ "factor": 2..20, "text": string }, ...]` — "Magic Rules" hints |
 | created_at / updated_at | timestamp | epoch |
 

@@ -41,6 +41,7 @@ export const games = sqliteTable("games", {
   baseTimeReward: integer("base_time_reward").notNull(),
   timePenalty: integer("time_penalty").notNull(),
   maxDailyTime: integer("max_daily_time").notNull().default(3600),
+  questionSeconds: integer("question_seconds").notNull().default(15),
   hintsJson: text("hints_json").notNull().default("[]"),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()

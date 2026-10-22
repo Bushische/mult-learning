@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "../../test/setup";
 import type { Game } from "@mult/shared";
+import { computeRewardSeconds } from "@mult/shared";
 import { useAuthStore } from "../../stores/auth-store";
 import { createApiStub, renderApp, resetSession } from "../../test/harness";
 import { buildOptions, generateQuestion, shuffle } from "./lib/question";
@@ -19,10 +20,15 @@ const GAME: Game = {
   baseTimeReward: 10,
   timePenalty: 5,
   maxDailyTime: 3600,
+  questionSeconds: 15,
   hints: [{ factor: 10, text: "Just add a 0 at the end!" }],
 };
 
 const TEN_GAME: Game = { ...GAME, id: "g-ten", rangeA: { min: 10, max: 10 } };
+
+const LONG_GAME: Game = { ...GAME, id: "g-long", name: "Long", questionSeconds: 20 };
+
+const ALL_GAMES: Game[] = [GAME, TEN_GAME, LONG_GAME];
 
 let bank = 0;
 let frames: FrameRequestCallback[] = [];
@@ -82,11 +88,23 @@ function apiStub(extra: Record<string, (call: { body: unknown }) => { data?: unk
     "GET /users": () => ({ data: [{ id: "u-child", username: "child1" }] }),
     "GET /games": () => ({ data: [GAME, TEN_GAME] }),
     "POST /answers": (call) => {
-      const body = call.body as { factorA: number; factorB: number; chosen: number | null };
+      const body = call.body as {
+        gameId: string;
+        factorA: number;
+        factorB: number;
+        chosen: number | null;
+        elapsedMs: number;
+      };
+      const played = ALL_GAMES.find((game) => game.id === body.gameId) ?? GAME;
       const rightAnswer = body.factorA * body.factorB;
       const correct = body.chosen !== null && body.chosen === rightAnswer;
-      const timeDelta = correct ? 10 : -5;
-      bank = Math.max(0, bank + timeDelta);
+      const reward = computeRewardSeconds({
+        baseTimeReward: played.baseTimeReward,
+        questionSeconds: played.questionSeconds,
+        elapsedMs: body.elapsedMs,
+      });
+      const timeDelta = correct ? reward : -played.timePenalty;
+      bank = Math.min(played.maxDailyTime, Math.max(0, bank + timeDelta));
       return {
         data: { correct, rightAnswer, timeBankSeconds: bank, timeDelta },
       };
@@ -375,5 +393,56 @@ describe("T22 — play HUD bank line", () => {
     await startQuestion();
 
     expect(screen.getByTestId("session-earned")).toHaveTextContent("earned");
+  });
+});
+
+describe("T23 — time-decayed reward", () => {
+  it("case 6: the countdown for a 20-second game runs 20 s, not the old 15 s", async () => {
+    const stub = apiStub({
+      "GET /games": () => ({ data: [GAME, TEN_GAME, LONG_GAME] }),
+    });
+    renderApp("/play/g-long");
+    await startQuestion();
+
+    // after 16 s the question is still open (the old 15 s countdown would have fired)
+    act(() => {
+      vi.advanceTimersByTime(16_000);
+    });
+    expect(stub.calls.some((call) => call.url === "/api/answers")).toBe(false);
+    expect(screen.queryByTestId("feedback")).toBeNull();
+
+    // past 20 s the timeout submits with the full duration
+    act(() => {
+      vi.advanceTimersByTime(5_000);
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("feedback")).toBeInTheDocument();
+    });
+    const call = stub.calls.find((entry) => entry.url === "/api/answers");
+    expect(call?.body).toMatchObject({ chosen: null });
+  });
+
+  it("case 7: waiting ~9 s then answering correctly shows the reduced time added", async () => {
+    bank = 0;
+    const stub = apiStub();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderApp("/play/g-easy");
+    await startQuestion();
+
+    act(() => {
+      vi.advanceTimersByTime(9_000);
+    });
+    const { a, b } = readFactors();
+    await user.click(screen.getByTestId(`answer-${a * b}`));
+    await screen.findByTestId("feedback");
+
+    const call = stub.calls.find((entry) => entry.url === "/api/answers");
+    expect(call?.body).toMatchObject({ chosen: a * b });
+    const elapsedMs = (call?.body as { elapsedMs: number }).elapsedMs;
+    expect(elapsedMs).toBeGreaterThanOrEqual(9000);
+    expect(elapsedMs).toBeLessThan(10_000);
+    // decayed reward 5, not the max 10
+    expect(screen.getByTestId("bank")).toHaveTextContent("Bank 0:05");
+    expect(screen.getByTestId("session-earned")).toHaveTextContent("session +0:05 earned");
   });
 });

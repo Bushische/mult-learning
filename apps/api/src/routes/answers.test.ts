@@ -39,6 +39,7 @@ describe("T6 — answer submission", () => {
       factorA: 2,
       factorB: 3,
       chosen: 6,
+      elapsedMs: 0,
     });
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({
@@ -64,24 +65,43 @@ describe("T6 — answer submission", () => {
   });
 
   it("case 2: wrong answers subtract the penalty and never go below 0", async () => {
-    await answer({ gameId: easyTwosId, factorA: 2, factorB: 3, chosen: 6 });
-    const wrong = await answer({ gameId: easyTwosId, factorA: 2, factorB: 4, chosen: 7 });
+    await answer({ gameId: easyTwosId, factorA: 2, factorB: 3, chosen: 6, elapsedMs: 0 });
+    const wrong = await answer({
+      gameId: easyTwosId,
+      factorA: 2,
+      factorB: 4,
+      chosen: 7,
+      elapsedMs: 0,
+    });
     expect(wrong.json()).toMatchObject({ correct: false, rightAnswer: 8, timeBankSeconds: 5 });
 
-    const first = await answer({ gameId: easyTwosId, factorA: 3, factorB: 3, chosen: 8 });
+    const first = await answer({
+      gameId: easyTwosId,
+      factorA: 3,
+      factorB: 3,
+      chosen: 8,
+      elapsedMs: 0,
+    });
     expect(first.json().timeBankSeconds).toBe(0);
-    const second = await answer({ gameId: easyTwosId, factorA: 3, factorB: 3, chosen: 8 });
+    const second = await answer({
+      gameId: easyTwosId,
+      factorA: 3,
+      factorB: 3,
+      chosen: 8,
+      elapsedMs: 0,
+    });
     expect(second.json().timeBankSeconds).toBe(0);
     expect(second.json().timeDelta).toBe(0);
   });
 
   it("case 3: a timeout (chosen null) counts as wrong", async () => {
-    await answer({ gameId: easyTwosId, factorA: 2, factorB: 3, chosen: 6 });
+    await answer({ gameId: easyTwosId, factorA: 2, factorB: 3, chosen: 6, elapsedMs: 0 });
     const timeout = await answer({
       gameId: easyTwosId,
       factorA: 2,
       factorB: 4,
       chosen: null,
+      elapsedMs: 0,
     });
     expect(timeout.json()).toMatchObject({ correct: false, rightAnswer: 8, timeBankSeconds: 5 });
 
@@ -103,6 +123,7 @@ describe("T6 — answer submission", () => {
       factorA: 2,
       factorB: 3,
       chosen: 6,
+      elapsedMs: 0,
     });
     expect(response.json()).toMatchObject({
       correct: true,
@@ -127,7 +148,7 @@ describe("T6 — answer submission", () => {
       method: "POST",
       url: "/api/answers",
       headers: { authorization: `Bearer ${adminToken}` },
-      payload: { gameId: easyTwosId, factorA: 2, factorB: 3, chosen: 6 },
+      payload: { gameId: easyTwosId, factorA: 2, factorB: 3, chosen: 6, elapsedMs: 0 },
     });
     expect(created.statusCode).toBe(403);
     expect(created.json().error.code).toBe("FORBIDDEN");
@@ -137,6 +158,7 @@ describe("T6 — answer submission", () => {
       factorA: 2,
       factorB: 3,
       chosen: 6,
+      elapsedMs: 0,
     });
     expect(unknown.statusCode).toBe(404);
     expect(unknown.json().error.code).toBe("NOT_FOUND");
@@ -146,9 +168,82 @@ describe("T6 — answer submission", () => {
     const response = await ctx.app.inject({
       method: "POST",
       url: "/api/answers",
-      payload: { gameId: easyTwosId, factorA: 2, factorB: 3, chosen: 6 },
+      payload: { gameId: easyTwosId, factorA: 2, factorB: 3, chosen: 6, elapsedMs: 0 },
     });
     expect(response.statusCode).toBe(401);
     expect(response.json().error.code).toBe("UNAUTHORIZED");
+  });
+});
+
+describe("T23 — time-decayed reward", () => {
+  it("case 1: elapsed 0 ms and 2000 ms pay the full reward (grace period)", async () => {
+    for (const elapsedMs of [0, 2000]) {
+      const response = await answer({
+        gameId: easyTwosId,
+        factorA: 2,
+        factorB: 3,
+        chosen: 6,
+        elapsedMs,
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toMatchObject({ correct: true, timeDelta: 10 });
+    }
+  });
+
+  it("case 2: elapsed 9000 ms of 15000 ms pays round(10 * 6000 / 12000) = 5", async () => {
+    const response = await answer({
+      gameId: easyTwosId,
+      factorA: 2,
+      factorB: 3,
+      chosen: 6,
+      elapsedMs: 9000,
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ correct: true, timeDelta: 5, timeBankSeconds: 5 });
+  });
+
+  it("case 3: elapsed at/past the countdown pays +0 and the bank is unchanged", async () => {
+    for (const elapsedMs of [15000, 99999]) {
+      const response = await answer({
+        gameId: easyTwosId,
+        factorA: 2,
+        factorB: 3,
+        chosen: 6,
+        elapsedMs,
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toMatchObject({ correct: true, timeDelta: 0, timeBankSeconds: 0 });
+    }
+  });
+
+  it("case 4: a wrong answer (or timeout) still subtracts the penalty", async () => {
+    await answer({ gameId: easyTwosId, factorA: 2, factorB: 3, chosen: 6, elapsedMs: 0 });
+    const wrong = await answer({
+      gameId: easyTwosId,
+      factorA: 2,
+      factorB: 3,
+      chosen: 5,
+      elapsedMs: 0,
+    });
+    expect(wrong.json()).toMatchObject({ correct: false, timeDelta: -5, timeBankSeconds: 5 });
+
+    const timeout = await answer({
+      gameId: easyTwosId,
+      factorA: 2,
+      factorB: 3,
+      chosen: null,
+      elapsedMs: 15000,
+    });
+    expect(timeout.json()).toMatchObject({ correct: false, timeDelta: -5, timeBankSeconds: 0 });
+  });
+
+  it("case 5: missing/negative/non-integer elapsedMs is a 400", async () => {
+    const base = { gameId: easyTwosId, factorA: 2, factorB: 3, chosen: 6 };
+    for (const elapsedMs of [undefined, -1, 1.5, "9000"]) {
+      const payload = elapsedMs === undefined ? base : { ...base, elapsedMs };
+      const response = await answer(payload);
+      expect(response.statusCode).toBe(400);
+      expect(response.json().error.code).toBe("VALIDATION_ERROR");
+    }
   });
 });

@@ -11,6 +11,7 @@ export async function submitAnswer(payload: {
   factorA: number;
   factorB: number;
   chosen: number | null;
+  elapsedMs: number;
 }): Promise<AnswerResponse> {
   const body = answerRequestSchema.parse(payload);
   const result = await api.post<AnswerResponse>("/answers", body, answerResponseSchema);

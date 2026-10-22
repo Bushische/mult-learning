@@ -78,6 +78,7 @@ describe("T5 — games read API", () => {
       baseTimeReward: 12,
       timePenalty: 4,
       maxDailyTime: 1800,
+      questionSeconds: 15,
       hints: [{ factor: 10, text: "Just add a 0 at the end!" }],
     });
   });

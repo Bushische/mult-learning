@@ -46,20 +46,24 @@
     "rangeA": { "min": 2, "max": 4 }, "rangeB": { "min": 5, "max": 8 },
     "allowedCombinations": [[2,5],[2,6]] | null,   // null = every combination in the ranges
     "variantCount": 3,                              // 3..6 answer buttons
-    "baseTimeReward": 10,                           // s, correct answer
+    "baseTimeReward": 10,                           // s, correct answer (before time decay)
     "timePenalty": 5,                               // s, wrong answer or timeout
     "maxDailyTime": 3600,                           // s, time bank cap (default 3600)
+    "questionSeconds": 15,                          // s per question, 5..60 (default 15)
     "hints": [ { "factor": 10, "text": "Just add a 0 at the end!" } ]
   }
   ```
 
 ## Answers (the core loop write path)
 
-- **POST /answers** (auth) — body `{ "gameId": "<cuid>", "factorA": int, "factorB": int, "chosen": int | null }`
-  (`null` = timeout). Server-side only:
+- **POST /answers** (auth) — body `{ "gameId": "<cuid>", "factorA": int, "factorB": int, "chosen": int | null, "elapsedMs": int }`
+  (`null` = timeout). `elapsedMs` (required, ≥ 0) is the milliseconds from the countdown
+  start to the tap, clamped server-side to `[0, questionSeconds·1000]`. Server-side only:
   1. Game must exist and be assigned to the caller (403 FORBIDDEN otherwise, 404 if no such game).
   2. `correct = chosen !== null && chosen === factorA * factorB`.
-  3. `timeDelta = correct ? +baseTimeReward : -timePenalty`;
+  3. `timeDelta = correct ? +computeRewardSeconds(baseTimeReward, questionSeconds, elapsedMs)
+     : -timePenalty` — full reward inside the 3 s grace period, then a linear shrink to +0
+     at the end of the question;
      `timeBank = clamp(current + timeDelta, 0, maxDailyTime)` — never negative, never above cap
      (surplus answers above the cap only count for stats, not for the bank).
   4. Write one `matrix_stats` row; upsert `daily_stats` (total_tries +1; correct_tries +1 when correct;

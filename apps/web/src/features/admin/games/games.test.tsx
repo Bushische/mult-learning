@@ -20,6 +20,7 @@ function makeGame(id: string, name: string, overrides: Partial<Game> = {}): Game
     baseTimeReward: 10,
     timePenalty: 5,
     maxDailyTime: 3600,
+    questionSeconds: 15,
     hints: [],
     ...overrides,
   };
@@ -324,5 +325,29 @@ describe("T14 — admin game studio", () => {
     });
     expect(state.games.find((game) => game.id === "g-easy")).toBeTruthy();
     expect(state.users[1]?.games).toContain("g-easy");
+  });
+});
+
+describe("T23 — seconds per question", () => {
+  it("the studio posts the seconds-per-question field (default 15)", async () => {
+    const { stub } = installServer();
+    const user = userEvent.setup();
+    renderApp("/admin");
+    await openGamesTab(user);
+
+    const field = screen.getByLabelText("Seconds per question");
+    expect(field).toHaveValue(15);
+    await user.clear(field);
+    await user.type(field, "20");
+
+    await user.type(screen.getByLabelText("Game name"), "Timed");
+    await user.click(screen.getByRole("button", { name: "Create game" }));
+
+    await waitFor(() => {
+      const post = stub.calls.find(
+        (call) => call.method === "POST" && call.url === "/api/admin/games",
+      );
+      expect(post?.body).toMatchObject({ name: "Timed", questionSeconds: 20 });
+    });
   });
 });

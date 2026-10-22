@@ -25,6 +25,7 @@ export function toGameDto(row: GameRow): Game {
     baseTimeReward: row.baseTimeReward,
     timePenalty: row.timePenalty,
     maxDailyTime: row.maxDailyTime,
+    questionSeconds: row.questionSeconds,
     hints: parseJsonArray<{ factor: number; text: string }>(row.hintsJson) ?? [],
   });
 }
