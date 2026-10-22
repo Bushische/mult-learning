@@ -1,8 +1,9 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { type RenderResult, render } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { App } from "../App";
 import { type Transport, setTransport } from "../lib/api-client";
+import { queryClient } from "../lib/query-client";
 import { useAuthStore } from "../stores/auth-store";
 
 export interface StubCall {
@@ -57,17 +58,18 @@ export function createApiStub(handlers: Record<string, StubHandler>): ApiStub {
   return { calls, transport };
 }
 
-/** Reset the in-memory session between tests. */
+/** Reset the in-memory session + query cache between tests. */
 export function resetSession(): void {
   useAuthStore.setState({ accessToken: null, user: null });
+  queryClient.clear();
 }
 
 export function renderApp(initialPath = "/"): RenderResult {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false, gcTime: 0 } },
-  });
   return render(
-    <MemoryRouter initialEntries={[initialPath]}>
+    <MemoryRouter
+      initialEntries={[initialPath]}
+      future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+    >
       <QueryClientProvider client={queryClient}>
         <App />
       </QueryClientProvider>
