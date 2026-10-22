@@ -56,10 +56,22 @@ export function AdminPage() {
         </nav>
 
         {tab === "dashboard" ? (
-          <section className="rounded-2xl bg-white p-4 shadow-sm">
-            <h2 className="mb-2 text-lg font-bold">Leaderboard (7 days)</h2>
-            <LeaderboardTable rows={leaderboard ?? []} />
-          </section>
+          <>
+            <section className="rounded-2xl bg-white p-4 shadow-sm">
+              <LeaderboardTable
+                rows={leaderboard?.today ?? []}
+                title="Today"
+                testId="leaderboard-today"
+              />
+            </section>
+            <section className="rounded-2xl bg-white p-4 shadow-sm">
+              <LeaderboardTable
+                rows={leaderboard?.last7Days ?? []}
+                title="Last 7 days"
+                testId="leaderboard-7days"
+              />
+            </section>
+          </>
         ) : null}
 
         {tab === "users" ? (

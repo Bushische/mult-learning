@@ -13,14 +13,13 @@ export function windowStartDate(now: Date = new Date()): string {
 }
 
 /**
- * Leaderboard: 7-day earned time (desc) + 7-day accuracy.
+ * Rank users by a set of `daily_stats` rows: earned time desc, username asc.
  * Users without activity show 0 seconds and a null accuracy.
  */
-export function getLeaderboard(db: Db, now: Date = new Date()): LeaderboardRow[] {
-  const start = windowStartDate(now);
-  const rows = db.select().from(dailyStats).where(gte(dailyStats.date, start)).all();
-  const allUsers = db.select().from(users).all();
-
+function rankLeaderboard(
+  allUsers: { id: string; username: string }[],
+  rows: { userId: string; timeEarnedSeconds: number; totalTries: number; correctTries: number }[],
+): LeaderboardRow[] {
   return allUsers
     .map((user) => {
       const own = rows.filter((row) => row.userId === user.id);
@@ -41,6 +40,30 @@ export function getLeaderboard(db: Db, now: Date = new Date()): LeaderboardRow[]
       }
       return a.username.localeCompare(b.username);
     });
+}
+
+/**
+ * Leaderboard: 7-day earned time (desc) + 7-day accuracy.
+ */
+export function getLeaderboard(db: Db, now: Date = new Date()): LeaderboardRow[] {
+  const start = windowStartDate(now);
+  const rows = db.select().from(dailyStats).where(gte(dailyStats.date, start)).all();
+  return rankLeaderboard(db.select().from(users).all(), rows);
+}
+
+/** Today's leaderboard: only `daily_stats` rows with `date` = today (UTC). */
+export function getLeaderboardToday(db: Db, now: Date = new Date()): LeaderboardRow[] {
+  const rows = db
+    .select()
+    .from(dailyStats)
+    .where(eq(dailyStats.date, todayDate(now)))
+    .all();
+  return rankLeaderboard(db.select().from(users).all(), rows);
+}
+
+/** Both leaderboard windows in one payload: today first, last 7 days second. */
+export function getLeaderboardWindows(db: Db, now: Date = new Date()) {
+  return { today: getLeaderboardToday(db, now), last7Days: getLeaderboard(db, now) };
 }
 
 /** Daily overview for one day (default: today). */

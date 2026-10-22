@@ -87,7 +87,7 @@
 | DELETE /admin/users/:id | — | 204; cascades assignments + stats; admin cannot delete the last admin |
 | PUT /admin/users/:id/games | `{ "gameIds": [id] }` | 200 current assignment list |
 | POST /admin/users/:id/reset | — | 204; wipes `matrix_stats` + `daily_stats` for the user, zeroes time bank |
-| GET /admin/leaderboard | — | `[{ "userId", "username", "timeEarnedSeconds" (7 d), "accuracy" (7 d, 0..1) }]` ranked by earned time desc |
+| GET /admin/leaderboard | — | `{ "today": LeaderboardRow[], "last7Days": LeaderboardRow[] }` (each row unchanged: `userId, username, timeEarnedSeconds, accuracy`, ranked by earned desc per window). `today` = `daily_stats` rows with `date` = today (UTC); `last7Days` = rolling 7-day window |
 | GET /admin/stats/daily?date=YYYY-MM-DD (default today) | — | `[{ "userId", "username", "totalTries", "correctTries", "timeEarnedSeconds", "timeBankSeconds" }]` |
 | GET /admin/games | — | `Game[]` (all) |
 | POST /admin/games | `GameConfig` (see GET /games shape) | 201 game; 400 VALIDATION_ERROR on bad ranges (min ≤ max, factors 1..20, variantCount 3..6) |

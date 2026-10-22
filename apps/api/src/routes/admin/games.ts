@@ -5,7 +5,7 @@ import {
   gamePatchSchema,
   gameSchema,
   gamesListSchema,
-  leaderboardSchema,
+  leaderboardResponseSchema,
 } from "@mult/shared";
 import type { FastifyInstance } from "fastify";
 import { requireAdmin } from "../../plugins/auth.js";
@@ -15,7 +15,7 @@ import {
   listAdminGames,
   updateGame,
 } from "../../services/adminGameService.js";
-import { getAdminDailyStats, getLeaderboard } from "../../services/adminStatsService.js";
+import { getAdminDailyStats, getLeaderboardWindows } from "../../services/adminStatsService.js";
 import { parseOrThrow } from "../../validation.js";
 
 interface IdParams {
@@ -54,8 +54,10 @@ export async function adminGameRoutes(app: FastifyInstance): Promise<void> {
     return reply.status(204).send();
   });
 
-  /** 7-day leaderboard. */
-  app.get("/leaderboard", async () => leaderboardSchema.parse(getLeaderboard(app.db)));
+  /** Leaderboard: today first, last 7 days second. */
+  app.get("/leaderboard", async () =>
+    leaderboardResponseSchema.parse(getLeaderboardWindows(app.db)),
+  );
 
   /** Daily overview (default: today). */
   app.get("/stats/daily", async (request) => {

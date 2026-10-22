@@ -296,6 +296,11 @@ export const usersListSchema = z.array(loginGridUserSchema);
 export const gamesListSchema = z.array(gameSchema);
 export const adminUsersListSchema = z.array(adminUserSchema);
 export const leaderboardSchema = z.array(leaderboardRowSchema);
+export const leaderboardResponseSchema = z.object({
+  today: z.array(leaderboardRowSchema),
+  last7Days: z.array(leaderboardRowSchema),
+});
+export type LeaderboardResponse = z.infer<typeof leaderboardResponseSchema>;
 export const adminDailyRowsSchema = z.array(adminDailyRowSchema);
 export const gameIdsListSchema = z.array(idSchema);
 

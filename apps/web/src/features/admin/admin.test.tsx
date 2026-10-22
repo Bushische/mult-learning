@@ -3,7 +3,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 import "../../test/setup";
-import type { AdminDailyRow, AdminUser, Game, LeaderboardRow } from "@mult/shared";
+import type { AdminDailyRow, AdminUser, Game, LeaderboardResponse } from "@mult/shared";
 import { ApiError, api } from "../../lib/api-client";
 import { useAuthStore } from "../../stores/auth-store";
 import { type ApiStub, createApiStub, renderApp, resetSession } from "../../test/harness";
@@ -41,7 +41,7 @@ interface StubUser extends AdminUser {
 
 interface ServerState {
   users: StubUser[];
-  leaderboard: LeaderboardRow[];
+  leaderboard: LeaderboardResponse;
   daily: AdminDailyRow[];
   /** token → username (the session of a logged-in user) */
   sessions: Record<string, string>;
@@ -62,10 +62,17 @@ function adminUser(username: string, role: "admin" | "user", bank = 0): StubUser
 function installServer(): { state: ServerState; stub: ApiStub } {
   const state: ServerState = {
     users: [adminUser("admin", "admin"), adminUser("child1", "user", 45)],
-    leaderboard: [
-      { userId: "u-child1", username: "child1", timeEarnedSeconds: 45, accuracy: 0.83 },
-      { userId: "u-child2", username: "child2", timeEarnedSeconds: 10, accuracy: 0.5 },
-    ],
+    leaderboard: {
+      today: [
+        { userId: "u-child2", username: "child2", timeEarnedSeconds: 120, accuracy: 1 },
+        { userId: "u-child1", username: "child1", timeEarnedSeconds: 60, accuracy: 0.83 },
+        { userId: "u-child3", username: "child3", timeEarnedSeconds: 0, accuracy: null },
+      ],
+      last7Days: [
+        { userId: "u-child2", username: "child2", timeEarnedSeconds: 300, accuracy: 0.9 },
+        { userId: "u-child1", username: "child1", timeEarnedSeconds: 45, accuracy: 0.83 },
+      ],
+    },
     daily: [
       {
         userId: "u-child1",
@@ -291,15 +298,29 @@ describe("T13 — admin panel", () => {
     expect(response).toMatchObject({ user: { username: "child1" } });
   });
 
-  it("case 5: the leaderboard shows the API order and formats the numbers", async () => {
+  it("T18 case 1+4: today ranks first, both tables show clock values, null accuracy is 0%", async () => {
     installServer();
     renderApp("/admin");
 
-    const rows = await screen.findAllByTestId(/^row-/);
-    expect(rows[0]).toHaveTextContent("child1");
-    expect(rows[1]).toHaveTextContent("child2");
-    expect(screen.getByTestId("score-child1")).toHaveTextContent("0:45 · 83%");
-    expect(screen.getByTestId("score-child2")).toHaveTextContent("0:10 · 50%");
+    const today = await screen.findByTestId("leaderboard-today");
+    const week = await screen.findByTestId("leaderboard-7days");
+    // DOM order: the Today table appears before Last 7 days
+    expect(today.compareDocumentPosition(week)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+
+    // independent rankings per window
+    const todayRows = within(today).getAllByTestId(/^leaderboard-today-row-/);
+    expect(todayRows[0]).toHaveTextContent("child2");
+    expect(todayRows[1]).toHaveTextContent("child1");
+    const weekRows = within(week).getAllByTestId(/^leaderboard-7days-row-/);
+    expect(weekRows[0]).toHaveTextContent("child2");
+    expect(weekRows[1]).toHaveTextContent("child1");
+
+    // clock format, no bare seconds
+    expect(screen.getByTestId("leaderboard-today-score-child2")).toHaveTextContent("2:00 · 100%");
+    expect(screen.getByTestId("leaderboard-today-score-child1")).toHaveTextContent("1:00 · 83%");
+    expect(screen.getByTestId("leaderboard-7days-score-child1")).toHaveTextContent("0:45 · 83%");
+    // a child with no tries has accuracy null and renders 0%
+    expect(screen.getByTestId("leaderboard-today-score-child3")).toHaveTextContent("0:00 · 0%");
   });
 
   it("case 6: the reset needs a confirmation and then zeroes the bank", async () => {

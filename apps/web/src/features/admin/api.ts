@@ -3,7 +3,7 @@ import {
   type AdminUser,
   type CreateUserRequest,
   type Game,
-  type LeaderboardRow,
+  type LeaderboardResponse,
   type UpdateUserRequest,
   adminDailyRowsSchema,
   adminUserSchema,
@@ -11,7 +11,7 @@ import {
   assignGamesRequestSchema,
   createUserRequestSchema,
   gamesListSchema,
-  leaderboardSchema,
+  leaderboardResponseSchema,
   updateUserRequestSchema,
 } from "@mult/shared";
 import { api } from "../../lib/api-client";
@@ -24,8 +24,8 @@ export function fetchAdminGames(): Promise<Game[]> {
   return api.get<Game[]>("/admin/games", gamesListSchema);
 }
 
-export function fetchLeaderboard(): Promise<LeaderboardRow[]> {
-  return api.get<LeaderboardRow[]>("/admin/leaderboard", leaderboardSchema);
+export function fetchLeaderboard(): Promise<LeaderboardResponse> {
+  return api.get<LeaderboardResponse>("/admin/leaderboard", leaderboardResponseSchema);
 }
 
 export function fetchAdminDaily(date?: string): Promise<AdminDailyRow[]> {

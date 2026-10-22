@@ -151,27 +151,125 @@ describe("T9 — admin games, leaderboard, daily overview", () => {
     expect(unknownDelete.statusCode).toBe(404);
   });
 
-  it("case 4: the leaderboard ranks by 7-day earned time and reports accuracy", async () => {
-    const child = ctx.db.select().from(users).where(eq(users.username, "child1")).get();
+  it("T18 case 1+2: today and 7-day windows rank independently; idle users still listed", async () => {
+    const childA = ctx.db.select().from(users).where(eq(users.username, "child1")).get();
+    const childB = (
+      await admin("POST", "/api/admin/users", { username: "child2", pin: "3333" })
+    ).json() as { id: string };
+    const childC = (
+      await admin("POST", "/api/admin/users", { username: "child3", pin: "4444" })
+    ).json() as { id: string };
     const today = new Date().toISOString().slice(0, 10);
+    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     ctx.db
       .insert(dailyStats)
-      .values({
-        userId: child?.id ?? "",
-        date: today,
-        totalTries: 10,
-        correctTries: 8,
-        timeEarnedSeconds: 45,
-      })
+      .values([
+        {
+          userId: childA?.id ?? "",
+          date: today,
+          totalTries: 10,
+          correctTries: 8,
+          timeEarnedSeconds: 60,
+        },
+        {
+          userId: childA?.id ?? "",
+          date: threeDaysAgo,
+          totalTries: 5,
+          correctTries: 3,
+          timeEarnedSeconds: 30,
+        },
+        {
+          userId: childB.id,
+          date: today,
+          totalTries: 12,
+          correctTries: 12,
+          timeEarnedSeconds: 120,
+        },
+        {
+          userId: childB.id,
+          date: threeDaysAgo,
+          totalTries: 20,
+          correctTries: 15,
+          timeEarnedSeconds: 180,
+        },
+        {
+          userId: childC.id,
+          date: threeDaysAgo,
+          totalTries: 25,
+          correctTries: 20,
+          timeEarnedSeconds: 250,
+        },
+      ])
       .run();
 
     const leaderboard = await admin("GET", "/api/admin/leaderboard");
     expect(leaderboard.statusCode).toBe(200);
-    const rows = leaderboard.json();
-    const first = rows[0];
-    expect(first).toMatchObject({ username: "child1", timeEarnedSeconds: 45, accuracy: 0.8 });
-    const idle = rows.find((row: { username: string }) => row.username === "admin");
-    expect(idle).toMatchObject({ timeEarnedSeconds: 0, accuracy: null });
+    const payload = leaderboard.json();
+
+    // today: child2 (120) > child1 (60) > admin/child3 (0, still listed, name order)
+    expect(payload.today.map((row: { username: string }) => row.username)).toEqual([
+      "child2",
+      "child1",
+      "admin",
+      "child3",
+    ]);
+    expect(payload.today[0]).toMatchObject({
+      username: "child2",
+      timeEarnedSeconds: 120,
+      accuracy: 1,
+    });
+    expect(
+      payload.today.find((row: { username: string }) => row.username === "child3"),
+    ).toMatchObject({ timeEarnedSeconds: 0, accuracy: null });
+
+    // last 7 days: child2 (300) > child3 (250) > child1 (90) — independent of today
+    expect(payload.last7Days.map((row: { username: string }) => row.username)).toEqual([
+      "child2",
+      "child3",
+      "child1",
+      "admin",
+    ]);
+    expect(payload.last7Days[0]).toMatchObject({
+      username: "child2",
+      timeEarnedSeconds: 300,
+    });
+    expect(payload.last7Days[1]).toMatchObject({
+      username: "child3",
+      timeEarnedSeconds: 250,
+      accuracy: 0.8,
+    });
+    expect(payload.last7Days[2]).toMatchObject({
+      username: "child1",
+      timeEarnedSeconds: 90,
+    });
+
+    // a user with no tries at all has a null accuracy in both windows
+    const idleToday = payload.today.find((row: { username: string }) => row.username === "admin");
+    expect(idleToday).toMatchObject({ timeEarnedSeconds: 0, accuracy: null });
+    const idleWeek = payload.last7Days.find(
+      (row: { username: string }) => row.username === "admin",
+    );
+    expect(idleWeek).toMatchObject({ timeEarnedSeconds: 0, accuracy: null });
+  });
+
+  it("T18 case 5: a child token gets 403 and no token gets 401 on the leaderboard", async () => {
+    const childLogin = await ctx.app.inject({
+      method: "POST",
+      url: "/api/auth/login",
+      payload: { username: "child1", pin: "2468" },
+    });
+    const childToken = childLogin.json().accessToken as string;
+
+    const forbidden = await ctx.app.inject({
+      method: "GET",
+      url: "/api/admin/leaderboard",
+      headers: { authorization: `Bearer ${childToken}` },
+    });
+    expect(forbidden.statusCode).toBe(403);
+    expect(forbidden.json().error.code).toBe("FORBIDDEN");
+
+    const anonymous = await ctx.app.inject({ method: "GET", url: "/api/admin/leaderboard" });
+    expect(anonymous.statusCode).toBe(401);
   });
 
   it("case 5: GET /admin/stats/daily returns the rows of the requested day and rejects children", async () => {
