@@ -8,24 +8,35 @@ import { useHeatmap } from "../hooks/useHeatmap";
 
 /** The main screen: header, heatmap, today's numbers and the assigned games. */
 export function DashboardPage() {
-  const { data: heatmap } = useHeatmap();
-  const { data: daily } = useDailyStats();
-  const { data: games } = useGames();
+  const heatmapQuery = useHeatmap();
+  const dailyQuery = useDailyStats();
+  const gamesQuery = useGames();
+
+  const offline = heatmapQuery.isError || dailyQuery.isError || gamesQuery.isError;
 
   return (
     <div className="min-h-screen">
       <AppHeader title="Dashboard" />
       <main className="mx-auto flex max-w-4xl flex-col gap-6 p-4">
+        {offline ? (
+          <output
+            data-testid="offline-banner"
+            className="rounded-2xl bg-amber-100 px-4 py-3 font-semibold text-amber-900"
+          >
+            You are offline — the server cannot be reached. No cached data is shown.
+          </output>
+        ) : null}
+
         <section className="rounded-2xl bg-white p-4 shadow-sm">
           <h2 className="mb-2 text-lg font-bold">Last 7 days</h2>
-          <HeatmapGrid cells={heatmap?.cells ?? []} />
+          <HeatmapGrid cells={heatmapQuery.data?.cells ?? []} />
         </section>
 
-        <DailyStatsCard stats={daily} />
+        <DailyStatsCard stats={dailyQuery.data} />
 
         <section>
           <h2 className="mb-2 text-lg font-bold">Your games</h2>
-          <GameList games={games ?? []} />
+          <GameList games={gamesQuery.data ?? []} />
         </section>
       </main>
     </div>

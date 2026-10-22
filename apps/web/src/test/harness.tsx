@@ -85,6 +85,8 @@ function findPatternHandler(
 export function resetSession(): void {
   useAuthStore.setState({ accessToken: null, user: null });
   queryClient.clear();
+  // tests must not wait for the retry back-off
+  queryClient.setDefaultOptions({ queries: { retry: false, gcTime: 0, staleTime: 0 } });
 }
 
 export function renderApp(initialPath = "/"): RenderResult {

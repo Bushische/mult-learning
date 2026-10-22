@@ -7,6 +7,13 @@ export default defineConfig({
       // The workspace package is consumed from source so tests never depend on
       // a stale `packages/shared/dist` build.
       "packages/shared": fileURLToPath(new URL("./packages/shared/src/index.ts", import.meta.url)),
+      // vite-plugin-pwa is a build-time plugin — the tests use the stub instead
+      "virtual:pwa-register/react": fileURLToPath(
+        new URL("./apps/web/src/test/pwa-register-stub.ts", import.meta.url),
+      ),
+      "virtual:pwa-register": fileURLToPath(
+        new URL("./apps/web/src/test/pwa-register-stub.ts", import.meta.url),
+      ),
     },
   },
   test: {
