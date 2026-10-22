@@ -11,9 +11,10 @@ import {
 import { LeaderboardTable } from "../components/LeaderboardTable";
 import { StatsTab } from "../components/StatsTab";
 import { UsersTab } from "../components/UsersTab";
+import { GameStudioPage } from "../games/pages/GameStudioPage";
 import { useAdminDaily, useAdminGames, useAdminUsers, useLeaderboard } from "../hooks/useAdminData";
 
-type Tab = "dashboard" | "users" | "stats";
+type Tab = "dashboard" | "users" | "stats" | "games";
 
 /** The admin panel: leaderboard, user management, stats + reset. */
 export function AdminPage() {
@@ -38,6 +39,7 @@ export function AdminPage() {
               ["dashboard", "Dashboard"],
               ["users", "Users"],
               ["stats", "Stats"],
+              ["games", "Games"],
             ] as [Tab, string][]
           ).map(([key, label]) => (
             <button
@@ -83,6 +85,8 @@ export function AdminPage() {
         ) : null}
 
         {tab === "stats" ? <StatsTab rows={daily ?? []} /> : null}
+
+        {tab === "games" ? <GameStudioPage /> : null}
       </main>
     </div>
   );
