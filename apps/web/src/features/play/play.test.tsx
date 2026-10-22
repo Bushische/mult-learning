@@ -157,7 +157,7 @@ describe("T12 — play screen", () => {
 
     expect(await screen.findByTestId("feedback")).toHaveTextContent("Correct!");
     expect(screen.getByTestId(`answer-${rightAnswer}`).className).toContain("bg-green-500");
-    expect(screen.getByTestId("bank")).toHaveTextContent("10s");
+    expect(screen.getByTestId("bank")).toHaveTextContent("0:10");
     const firstCall = stub.calls.find((call) => call.url === "/api/answers");
     expect(firstCall?.body).toMatchObject({ factorA: a, factorB: b, chosen: rightAnswer });
 
@@ -254,7 +254,7 @@ describe("T12 — play screen", () => {
     expect(await screen.findByTestId("summary")).toBeInTheDocument();
     expect(screen.getByTestId("summary-tries")).toHaveTextContent("1 questions");
     expect(screen.getByTestId("summary-accuracy")).toHaveTextContent("100%");
-    expect(screen.getByTestId("summary-bank")).toHaveTextContent("+10s earned");
+    expect(screen.getByTestId("summary-bank")).toHaveTextContent("+0:10 earned");
 
     await user.click(screen.getByRole("button", { name: "Play more" }));
     await startQuestion();

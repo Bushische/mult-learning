@@ -72,6 +72,13 @@ Requires: `opencode` CLI, pnpm (`corepack enable`), Docker. Task-writing workflo
    slot-machine play screen, admin panel, game studio, PWA.
 4. **Phase D — Deployment (T16):** arm64 Dockerfiles, prod compose, Synology runbook + smoke tests.
 
+**Feedback round 1 (T17–T27):** human-readable clock durations (T17); admin leaderboard with
+today first + 7 days second (T18); clickable leaderboard names (T19) and the child stats page
+with heatmap + 7-day usage (T20); "3 options" wording (T21); clearer bank line (T22);
+time-decayed reward where waiting costs earning (T23) and the matching progress-bar
+max/current/min display (T24); roll sequence with deliberate pauses (T25); misleading
+distractor options (T26); correct-answer feedback + single-submission guard (T27).
+
 ## Dev environment (Docker)
 
 ```bash

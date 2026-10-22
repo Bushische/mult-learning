@@ -1,4 +1,5 @@
 import type { LeaderboardRow } from "@mult/shared";
+import { formatDuration } from "../../dashboard/lib/format";
 
 interface LeaderboardTableProps {
   rows: LeaderboardRow[];
@@ -30,7 +31,7 @@ export function LeaderboardTable({ rows }: LeaderboardTableProps) {
           >
             <td className="py-2 font-semibold">{row.username}</td>
             <td className="py-2" data-testid={`score-${row.username}`}>
-              +{row.timeEarnedSeconds}s ·{" "}
+              {formatDuration(row.timeEarnedSeconds)} ·{" "}
               {row.accuracy === null ? 0 : Math.round(row.accuracy * 100)}%
             </td>
           </tr>

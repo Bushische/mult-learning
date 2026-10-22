@@ -1,3 +1,4 @@
+import { formatDuration } from "../../dashboard/lib/format";
 import type { SessionSummary } from "../lib/session";
 
 interface SessionSummaryCardProps {
@@ -21,7 +22,7 @@ export function SessionSummaryCard({ summary, onPlayMore, onExit }: SessionSumma
         Accuracy: {summary.accuracyPercent}%
       </p>
       <p className="text-lg font-bold text-emerald-700" data-testid="summary-bank">
-        +{summary.bankAdded}s earned
+        +{formatDuration(summary.bankAdded)} earned
       </p>
       <div className="flex w-full flex-col gap-3">
         <button

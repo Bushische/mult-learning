@@ -298,8 +298,8 @@ describe("T13 — admin panel", () => {
     const rows = await screen.findAllByTestId(/^row-/);
     expect(rows[0]).toHaveTextContent("child1");
     expect(rows[1]).toHaveTextContent("child2");
-    expect(screen.getByTestId("score-child1")).toHaveTextContent("+45s · 83%");
-    expect(screen.getByTestId("score-child2")).toHaveTextContent("+10s · 50%");
+    expect(screen.getByTestId("score-child1")).toHaveTextContent("0:45 · 83%");
+    expect(screen.getByTestId("score-child2")).toHaveTextContent("0:10 · 50%");
   });
 
   it("case 6: the reset needs a confirmation and then zeroes the bank", async () => {
@@ -325,5 +325,16 @@ describe("T13 — admin panel", () => {
     await waitFor(() => {
       expect(screen.getByTestId("user-child1")).toHaveTextContent("0:00 bank");
     });
+  });
+
+  it("T17 case 4: the admin stats tab shows earned time as a clock value", async () => {
+    installServer();
+    const user = userEvent.setup();
+    renderApp("/admin");
+
+    await user.click(await screen.findByRole("button", { name: "Stats" }));
+    const row = await screen.findByTestId("daily-row-child1");
+    expect(row).toHaveTextContent("+0:45");
+    expect(row).not.toHaveTextContent("+45s");
   });
 });

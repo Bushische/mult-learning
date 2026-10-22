@@ -1,4 +1,5 @@
 import type { DailyStats } from "@mult/shared";
+import { formatDuration } from "../lib/format";
 
 interface DailyStatsCardProps {
   stats: DailyStats | undefined;
@@ -17,7 +18,7 @@ export function DailyStatsCard({ stats }: DailyStatsCardProps) {
         {stats?.totalTries ?? 0} tries · {stats?.correctTries ?? 0} correct
       </p>
       <p className="text-lg font-semibold text-emerald-700" data-testid="daily-earned">
-        +{stats?.timeEarnedSeconds ?? 0}s today
+        +{formatDuration(stats?.timeEarnedSeconds ?? 0)} today
       </p>
     </section>
   );

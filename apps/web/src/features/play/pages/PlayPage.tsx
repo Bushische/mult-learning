@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppHeader } from "../../dashboard/components/AppHeader";
 import { useGames } from "../../dashboard/hooks/useGames";
+import { formatDuration } from "../../dashboard/lib/format";
 import { submitAnswer } from "../api";
 import { AnswerButtons } from "../components/AnswerButtons";
 import { CountdownBar } from "../components/CountdownBar";
@@ -157,7 +158,7 @@ export function PlayPage({ gameId, rollDurationMs, questionSeconds }: PlayPagePr
         <div className="rounded-2xl bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
             <span className="text-sm text-slate-500" data-testid="bank">
-              Bank: {bank}s
+              Bank: {formatDuration(bank)}
             </span>
             <span className="text-sm text-slate-500" data-testid="tries">
               {tries} answered

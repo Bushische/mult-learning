@@ -168,7 +168,7 @@ describe("T11 — dashboard", () => {
       expect(screen.getByTestId("daily-tries")).toHaveTextContent("6 tries");
     });
     expect(screen.getByTestId("daily-tries")).toHaveTextContent("2 correct");
-    expect(screen.getByTestId("daily-earned")).toHaveTextContent("+20s today");
+    expect(screen.getByTestId("daily-earned")).toHaveTextContent("+0:20 today");
   });
 
   it("case 5: every assigned game shows its economics and opens the play screen", async () => {

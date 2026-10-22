@@ -1,6 +1,6 @@
 import type { AdminDailyRow } from "@mult/shared";
 import { useState } from "react";
-import { formatBank } from "../../dashboard/lib/format";
+import { formatDuration } from "../../dashboard/lib/format";
 
 interface StatsTabProps {
   rows: AdminDailyRow[];
@@ -57,8 +57,8 @@ export function StatsTab({ rows }: StatsTabProps) {
               <td className="py-2 font-semibold">{row.username}</td>
               <td className="py-2">{row.totalTries}</td>
               <td className="py-2">{row.correctTries}</td>
-              <td className="py-2">+{row.timeEarnedSeconds}s</td>
-              <td className="py-2">{formatBank(row.timeBankSeconds)}</td>
+              <td className="py-2">+{formatDuration(row.timeEarnedSeconds)}</td>
+              <td className="py-2">{formatDuration(row.timeBankSeconds)}</td>
             </tr>
           ))}
         </tbody>
