@@ -54,6 +54,14 @@ export function PlayPage({ gameId, questionSeconds }: PlayPageProps) {
   const [bankAdded, setBankAdded] = useState(0);
   const [bank, setBank] = useState<number | null>(null);
   const [lastCorrect, setLastCorrect] = useState<boolean | null>(null);
+  /** The server's right answer for the submitted question (feedback copy). */
+  const [serverRightAnswer, setServerRightAnswer] = useState<number | null>(null);
+  /** True while the last submission failed (retry allowed, no verdict shown). */
+  const [saveError, setSaveError] = useState(false);
+  /** One question accepts exactly one submission: the first tap wins, the
+   * countdown stops at once so a timeout cannot race the in-flight answer. */
+  const [answered, setAnswered] = useState(false);
+  const submittingRef = useRef(false);
   /** The numbers on display: Num 1 shuffles during `roll1`, Num 2 (`null` = `?`)
    * shuffles during `roll2` and both lock before the question opens. */
   const [displayA, setDisplayA] = useState(1);
@@ -71,6 +79,10 @@ export function PlayPage({ gameId, questionSeconds }: PlayPageProps) {
     setQuestion(next);
     setChosen(null);
     setLastCorrect(null);
+    setServerRightAnswer(null);
+    setSaveError(false);
+    setAnswered(false);
+    submittingRef.current = false;
     setDisplayA(1 + Math.floor(rng() * 20));
     setDisplayB(null);
     setPhase("roll1");
@@ -136,7 +148,9 @@ export function PlayPage({ gameId, questionSeconds }: PlayPageProps) {
 
   const record = useCallback(
     async (value: number | null) => {
-      if (!question || !game) return;
+      if (!question || !game || submittingRef.current) return;
+      submittingRef.current = true;
+      setAnswered(true);
       setChosen(value);
       const elapsedMs = Math.max(0, Date.now() - questionStartedAt.current);
       try {
@@ -150,23 +164,32 @@ export function PlayPage({ gameId, questionSeconds }: PlayPageProps) {
         setBank(result.timeBankSeconds);
         if (result.timeDelta > 0) setBankAdded((total) => total + result.timeDelta);
         setLastCorrect(result.correct);
+        setServerRightAnswer(result.rightAnswer);
+        setSaveError(false);
+        setTries((total) => total + 1);
+        setCorrectCount(
+          (total) => total + (value !== null && value === question.rightAnswer ? 1 : 0),
+        );
+        setPhase("feedback");
       } catch {
-        setLastCorrect(false);
+        // Never fabricate a verdict: stay on the question and offer a retry.
+        submittingRef.current = false;
+        setSaveError(true);
       }
-      setTries((total) => total + 1);
-      setCorrectCount(
-        (total) => total + (value !== null && value === question.rightAnswer ? 1 : 0),
-      );
-      setPhase("feedback");
     },
     [question, game],
   );
+
+  const retry = useCallback(() => {
+    setSaveError(false);
+    void record(chosen);
+  }, [record, chosen]);
 
   const handleTimeout = useCallback(() => {
     void record(null);
   }, [record]);
 
-  const countdown = useCountdown(seconds * 1000, phase === "question", handleTimeout);
+  const countdown = useCountdown(seconds * 1000, phase === "question" && !answered, handleTimeout);
 
   const hint = useMemo(() => {
     if (!game || !question) return null;
@@ -248,11 +271,27 @@ export function PlayPage({ gameId, questionSeconds }: PlayPageProps) {
           <div style={{ animation: "play-options-in 0.3s ease-out" }}>
             <AnswerButtons
               options={question.options}
-              disabled={phase !== "question"}
+              disabled={phase !== "question" || answered}
               chosen={chosen}
               rightAnswer={phase === "feedback" ? question.rightAnswer : null}
               onSelect={(value) => void record(value)}
             />
+          </div>
+        ) : null}
+
+        {saveError && phase === "question" ? (
+          <div className="flex flex-col items-center gap-3">
+            <p className="text-center text-lg font-bold text-red-600" data-testid="save-error">
+              Couldn&apos;t save your answer — try again
+            </p>
+            <button
+              type="button"
+              onClick={retry}
+              data-testid="try-again"
+              className="min-h-[48px] rounded-2xl border border-slate-300 px-6 text-lg"
+            >
+              Try again
+            </button>
           </div>
         ) : null}
 
@@ -263,7 +302,9 @@ export function PlayPage({ gameId, questionSeconds }: PlayPageProps) {
             }`}
             data-testid="feedback"
           >
-            {lastCorrect ? "Correct!" : `The answer was ${question?.rightAnswer ?? 0}`}
+            {lastCorrect
+              ? "Correct!"
+              : `The answer was ${serverRightAnswer ?? question?.rightAnswer ?? 0}`}
           </p>
         ) : null}
 

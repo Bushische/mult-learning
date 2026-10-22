@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "../../test/setup";
@@ -33,6 +33,8 @@ const LONG_GAME: Game = { ...GAME, id: "g-long", name: "Long", questionSeconds: 
 const ALL_GAMES: Game[] = [GAME, TEN_GAME, LONG_GAME];
 
 let bank = 0;
+/** When true, POST /answers fails with 500 (T27 case 5). Reset per test. */
+let failPosts = false;
 
 /** Advance the fake clock; every timer due in the window fires deterministically. */
 async function tick(ms: number): Promise<void> {
@@ -93,6 +95,9 @@ function apiStub(extra: Record<string, (call: { body: unknown }) => { data?: unk
     "GET /users": () => ({ data: [{ id: "u-child", username: "child1" }] }),
     "GET /games": () => ({ data: [GAME, TEN_GAME] }),
     "POST /answers": (call) => {
+      if (failPosts) {
+        return { status: 500, data: { error: { code: "UNKNOWN", message: "boom" } } };
+      }
       const body = call.body as {
         gameId: string;
         factorA: number;
@@ -125,6 +130,7 @@ beforeEach(() => {
     user: { id: "u-child", username: "child1", role: "user" },
   });
   bank = 0;
+  failPosts = false;
   setRng(createSeededRng(7));
   vi.useFakeTimers({ shouldAdvanceTime: true });
 });
@@ -606,5 +612,97 @@ describe("T25 — roll sequence with deliberate pauses", () => {
     expect(screen.getAllByTestId(/^answer-/)[0]).not.toBeDisabled();
     expect(screen.getByTestId("factor-b").textContent).toMatch(/^\d+$/);
     expect(screen.getByTestId("earning-current")).toHaveTextContent("+0:10");
+  });
+});
+
+describe("T27 — single submission and honest feedback", () => {
+  it("case 1: a correct tap then a long wait submits once and says Correct!", async () => {
+    bank = 0;
+    const stub = apiStub();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderApp("/play/g-easy");
+    await startQuestion();
+
+    const { a, b } = readFactors();
+    await user.click(screen.getByTestId(`answer-${a * b}`));
+    expect(await screen.findByTestId("feedback")).toHaveTextContent("Correct!");
+
+    await tick(20_000);
+    expect(stub.calls.filter((call) => call.url === "/api/answers")).toHaveLength(1);
+    expect(screen.getByTestId("feedback")).toHaveTextContent("Correct!");
+  });
+
+  it("case 2: double-tapping an option in the same question submits only once", async () => {
+    bank = 0;
+    const stub = apiStub();
+    renderApp("/play/g-easy");
+    await startQuestion();
+
+    const { a, b } = readFactors();
+    const button = screen.getByTestId(`answer-${a * b}`);
+    fireEvent.click(button);
+    fireEvent.click(button);
+    expect(await screen.findByTestId("feedback")).toHaveTextContent("Correct!");
+    expect(stub.calls.filter((call) => call.url === "/api/answers")).toHaveLength(1);
+  });
+
+  it("case 3: a wrong option shows the server right answer and the bar stops", async () => {
+    bank = 0;
+    const stub = apiStub();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderApp("/play/g-easy");
+    await startQuestion();
+
+    const { a, b } = readFactors();
+    const rightAnswer = a * b;
+    const wrongButton = screen
+      .getAllByTestId(/^answer-/)
+      .find((button) => button.textContent !== String(rightAnswer)) as HTMLElement;
+    await user.click(wrongButton);
+    expect(await screen.findByTestId("feedback")).toHaveTextContent(
+      `The answer was ${rightAnswer}`,
+    );
+
+    const width = screen.getByTestId("countdown-fill").style.width;
+    await tick(10_000);
+    expect(screen.getByTestId("countdown-fill").style.width).toBe(width);
+    expect(stub.calls.filter((call) => call.url === "/api/answers")).toHaveLength(1);
+  });
+
+  it("case 4: a timeout with no tap submits chosen:null once with wrong-answer feedback", async () => {
+    bank = 0;
+    const stub = apiStub();
+    renderApp("/play/g-easy");
+    await startQuestion();
+
+    await tick(16_000);
+    expect(await screen.findByTestId("feedback")).toHaveTextContent("The answer was");
+    const posts = stub.calls.filter((call) => call.url === "/api/answers");
+    expect(posts).toHaveLength(1);
+    expect(posts[0]?.body).toMatchObject({ chosen: null });
+  });
+
+  it("case 5: an API failure shows the error, updates nothing, and retry works", async () => {
+    bank = 0;
+    failPosts = true;
+    const stub = apiStub();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderApp("/play/g-easy");
+    await startQuestion();
+
+    const { a, b } = readFactors();
+    await user.click(screen.getByTestId(`answer-${a * b}`));
+    expect(await screen.findByTestId("save-error")).toHaveTextContent("Couldn't save your answer");
+    // no fabricated verdict, no bank/attempt update
+    expect(screen.queryByTestId("feedback")).toBeNull();
+    expect(screen.getByTestId("bank")).toHaveTextContent("Bank 0:00");
+    expect(screen.getByTestId("tries")).toHaveTextContent("0 answered");
+
+    // retry allowed: the queued tap goes through once the API is back
+    failPosts = false;
+    await user.click(screen.getByTestId("try-again"));
+    expect(await screen.findByTestId("feedback")).toHaveTextContent("Correct!");
+    expect(screen.getByTestId("tries")).toHaveTextContent("1 answered");
+    expect(stub.calls.filter((call) => call.url === "/api/answers")).toHaveLength(2);
   });
 });
