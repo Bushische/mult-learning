@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import jwt from "jsonwebtoken";
 import { users } from "../db/schema.js";
+import { unauthorized } from "../errors.js";
 
 /** The authenticated caller (filled by `requireAuth`). */
 export interface AuthUser {
@@ -72,6 +73,17 @@ export async function requireAuth(request: FastifyRequest, reply: FastifyReply):
     return;
   }
   request.authUser = { id: user.id, username: user.username, role: user.role };
+}
+
+/**
+ * The authenticated caller. Throws when the route was not protected by
+ * `requireAuth`.
+ */
+export function requireAuthUser(request: FastifyRequest): AuthUser {
+  if (!request.authUser) {
+    throw unauthorized("Authentication required");
+  }
+  return request.authUser;
 }
 
 /**
