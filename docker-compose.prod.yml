@@ -1,0 +1,43 @@
+# Production compose (Synology DS223j / Container Manager).
+#   docker compose -f docker-compose.prod.yml up -d
+# The web container serves the PWA and proxies /api to the api container.
+services:
+  api:
+    image: mult-learning-api:latest
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    mem_limit: 128m
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env (see .env.example)}
+      DATABASE_PATH: /data/app.db
+      CORS_ORIGIN: ${CORS_ORIGIN:-}
+    volumes:
+      - data:/data
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3000/health']
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  web:
+    image: mult-learning-web:latest
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    mem_limit: 32m
+    ports:
+      - '${WEB_PORT:-8080}:80'
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  data:

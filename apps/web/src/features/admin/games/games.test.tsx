@@ -3,7 +3,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 import "../../../test/setup";
-import type { AdminUser, Game } from "packages/shared";
+import type { AdminUser, Game } from "@mult/shared";
 import { api } from "../../../lib/api-client";
 import { useAuthStore } from "../../../stores/auth-store";
 import { type ApiStub, createApiStub, renderApp, resetSession } from "../../../test/harness";

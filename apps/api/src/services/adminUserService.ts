@@ -1,6 +1,6 @@
+import type { AdminUser, CreateUserRequest, UpdateUserRequest } from "@mult/shared";
 import bcrypt from "bcryptjs";
 import { and, eq } from "drizzle-orm";
-import type { AdminUser, CreateUserRequest, UpdateUserRequest } from "packages/shared";
 import type { Db } from "../db/client.js";
 import {
   type User,

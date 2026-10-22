@@ -1,5 +1,5 @@
+import { type Game, gameSchema } from "@mult/shared";
 import { and, eq } from "drizzle-orm";
-import { type Game, gameSchema } from "packages/shared";
 import type { Db } from "../db/client.js";
 import { type GameRow, games, userGameAssignments } from "../db/schema.js";
 

@@ -1,4 +1,4 @@
-import type { SessionUser } from "packages/shared";
+import type { SessionUser } from "@mult/shared";
 import { create } from "zustand";
 
 export interface AuthState {

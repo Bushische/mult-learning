@@ -1,5 +1,5 @@
+import type { AdminDailyRow, LeaderboardRow } from "@mult/shared";
 import { and, eq, gte } from "drizzle-orm";
-import type { AdminDailyRow, LeaderboardRow } from "packages/shared";
 import type { Db } from "../db/client.js";
 import { dailyStats, users } from "../db/schema.js";
 

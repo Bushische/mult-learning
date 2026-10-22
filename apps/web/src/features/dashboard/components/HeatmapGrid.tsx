@@ -1,4 +1,4 @@
-import type { HeatmapCell } from "packages/shared";
+import type { HeatmapCell } from "@mult/shared";
 
 interface HeatmapGridProps {
   cells: HeatmapCell[];

@@ -1,4 +1,4 @@
-import type { DailyStats } from "packages/shared";
+import type { DailyStats } from "@mult/shared";
 
 interface DailyStatsCardProps {
   stats: DailyStats | undefined;

@@ -1,5 +1,5 @@
+import { type DailyStats, dailyStatsSchema } from "@mult/shared";
 import { useQuery } from "@tanstack/react-query";
-import { type DailyStats, dailyStatsSchema } from "packages/shared";
 import { api } from "../../../lib/api-client";
 
 /** Today's stats of the signed-in child. */

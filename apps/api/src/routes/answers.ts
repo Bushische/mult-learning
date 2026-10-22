@@ -1,5 +1,5 @@
+import { answerRequestSchema, answerResponseSchema } from "@mult/shared";
 import type { FastifyInstance } from "fastify";
-import { answerRequestSchema, answerResponseSchema } from "packages/shared";
 import { requireAuth, requireAuthUser } from "../plugins/auth.js";
 import { submitAnswer } from "../services/answerService.js";
 import { parseOrThrow } from "../validation.js";

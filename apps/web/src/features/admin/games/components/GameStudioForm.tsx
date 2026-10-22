@@ -1,4 +1,4 @@
-import { type Game, type GameConfig, gameConfigSchema } from "packages/shared";
+import { type Game, type GameConfig, gameConfigSchema } from "@mult/shared";
 import { useState } from "react";
 import { CombinationMatrix } from "./CombinationMatrix";
 import { HintsEditor } from "./HintsEditor";

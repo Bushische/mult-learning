@@ -1,4 +1,4 @@
-import type { LoginGridUser } from "packages/shared";
+import type { LoginGridUser } from "@mult/shared";
 
 interface UserGridProps {
   users: LoginGridUser[];

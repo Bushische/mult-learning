@@ -1,5 +1,5 @@
+import { type HeatmapResponse, heatmapResponseSchema } from "@mult/shared";
 import { useQuery } from "@tanstack/react-query";
-import { type HeatmapResponse, heatmapResponseSchema } from "packages/shared";
 import { api } from "../../../lib/api-client";
 
 /** Rolling 7-day heatmap of the signed-in child. */

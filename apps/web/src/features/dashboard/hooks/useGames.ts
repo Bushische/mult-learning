@@ -1,5 +1,5 @@
+import { type Game, gamesListSchema } from "@mult/shared";
 import { useQuery } from "@tanstack/react-query";
-import { type Game, gamesListSchema } from "packages/shared";
 import { api } from "../../../lib/api-client";
 
 /** The games assigned to the signed-in child. */

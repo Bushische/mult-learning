@@ -1,4 +1,4 @@
-import type { GameHint } from "packages/shared";
+import type { GameHint } from "@mult/shared";
 import { useState } from "react";
 
 interface HintsEditorProps {

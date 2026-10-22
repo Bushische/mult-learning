@@ -1,10 +1,10 @@
-import type { FastifyInstance, FastifyReply } from "fastify";
 import {
   loginRequestSchema,
   loginResponseSchema,
   logoutResponseSchema,
   refreshResponseSchema,
-} from "packages/shared";
+} from "@mult/shared";
+import type { FastifyInstance, FastifyReply } from "fastify";
 import {
   REFRESH_COOKIE_NAME,
   REFRESH_COOKIE_PATH,

@@ -1,4 +1,4 @@
-import type { Game } from "packages/shared";
+import type { Game } from "@mult/shared";
 
 interface GameListProps {
   games: Game[];

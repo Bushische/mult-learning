@@ -1,5 +1,5 @@
+import { dailyStatsSchema, heatmapResponseSchema } from "@mult/shared";
 import type { FastifyInstance } from "fastify";
-import { dailyStatsSchema, heatmapResponseSchema } from "packages/shared";
 import { requireAuth, requireAuthUser } from "../plugins/auth.js";
 import { getDailyStats, getHeatmap } from "../services/statsService.js";
 

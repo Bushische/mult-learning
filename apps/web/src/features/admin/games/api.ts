@@ -6,7 +6,7 @@ import {
   gamePatchSchema,
   gameSchema,
   gamesListSchema,
-} from "packages/shared";
+} from "@mult/shared";
 import { api } from "../../../lib/api-client";
 
 export function fetchAdminGames(): Promise<Game[]> {

@@ -1,4 +1,4 @@
-import type { LeaderboardRow } from "packages/shared";
+import type { LeaderboardRow } from "@mult/shared";
 
 interface LeaderboardTableProps {
   rows: LeaderboardRow[];

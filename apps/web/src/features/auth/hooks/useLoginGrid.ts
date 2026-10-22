@@ -1,5 +1,5 @@
+import { type LoginGridUser, usersListSchema } from "@mult/shared";
 import { useQuery } from "@tanstack/react-query";
-import { type LoginGridUser, usersListSchema } from "packages/shared";
 import { api } from "../../../lib/api-client";
 
 /** The public login grid (ids + usernames). */

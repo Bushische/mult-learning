@@ -1,5 +1,5 @@
+import { gamesListSchema } from "@mult/shared";
 import type { FastifyInstance } from "fastify";
-import { gamesListSchema } from "packages/shared";
 import { requireAuth, requireAuthUser } from "../plugins/auth.js";
 import { listAllGames, listGamesForUser } from "../services/gameService.js";
 

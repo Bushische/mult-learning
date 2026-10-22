@@ -1,5 +1,5 @@
+import type { AnswerRequest, AnswerResponse } from "@mult/shared";
 import { and, eq } from "drizzle-orm";
-import type { AnswerRequest, AnswerResponse } from "packages/shared";
 import type { Db } from "../db/client.js";
 import { dailyStats, games, matrixStats, userGameAssignments, users } from "../db/schema.js";
 import { forbidden, notFound } from "../errors.js";

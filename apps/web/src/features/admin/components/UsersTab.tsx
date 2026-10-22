@@ -1,4 +1,4 @@
-import type { AdminUser, Game } from "packages/shared";
+import type { AdminUser, Game } from "@mult/shared";
 import { useState } from "react";
 import { UserRow } from "./UserRow";
 

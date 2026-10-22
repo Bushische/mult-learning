@@ -1,4 +1,4 @@
-import { refreshResponseSchema } from "packages/shared";
+import { refreshResponseSchema } from "@mult/shared";
 import type { z } from "zod";
 import { useAuthStore } from "../stores/auth-store";
 

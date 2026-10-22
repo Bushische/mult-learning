@@ -50,9 +50,7 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      "packages/shared": fileURLToPath(
-        new URL("../../packages/shared/src/index.ts", import.meta.url),
-      ),
+      "@mult/shared": fileURLToPath(new URL("../../packages/shared/src/index.ts", import.meta.url)),
     },
   },
   server: {

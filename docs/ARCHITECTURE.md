@@ -7,9 +7,10 @@ Monorepo (pnpm workspaces):
 - `packages/shared` zod schemas + shared DTO types
 
 ## Containers (docker-compose)
-1. `api`     node:20-alpine — Fastify app; volume: `data` (SQLite db)
-2. `web`     dev: node:20-alpine with Vite dev server + `/api` proxy to `api:3000`;
-             prod: nginx:alpine serving built static files + reverse proxy `/api` → `api:3000`
+1. `api`     node:22-alpine — Fastify app; volume: `data` (SQLite db). Node 22 is the
+             minimum for `better-sqlite3@13` (NAPI prebuilds — no compiler in the image).
+2. `web`     dev: node:22-alpine with Vite dev server + `/api` proxy to `api:3000`;
+              prod: nginx:alpine serving built static files + reverse proxy `/api` → `api:3000`
 
 **No database container.** SQLite runs in-process via `better-sqlite3`; the DB file lives on the
 `data` volume (`/data/app.db`, WAL mode). On the 1 GB NAS a separate database server would cost

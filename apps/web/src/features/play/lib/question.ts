@@ -1,4 +1,4 @@
-import type { Game } from "packages/shared";
+import type { Game } from "@mult/shared";
 
 export interface Question {
   factorA: number;

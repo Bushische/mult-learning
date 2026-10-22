@@ -1,5 +1,5 @@
+import type { DailyStats, HeatmapCell, HeatmapResponse } from "@mult/shared";
 import { and, eq, gte } from "drizzle-orm";
-import type { DailyStats, HeatmapCell, HeatmapResponse } from "packages/shared";
 import type { Db } from "../db/client.js";
 import { dailyStats, matrixStats, users } from "../db/schema.js";
 import { listGamesForUser } from "./gameService.js";

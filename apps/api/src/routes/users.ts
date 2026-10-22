@@ -1,5 +1,5 @@
+import { meSchema, usersListSchema } from "@mult/shared";
 import type { FastifyInstance } from "fastify";
-import { meSchema, usersListSchema } from "packages/shared";
 import { notFound } from "../errors.js";
 import { requireAuth, requireAuthUser } from "../plugins/auth.js";
 import { findUserById, listLoginGridUsers, toMe } from "../services/userService.js";

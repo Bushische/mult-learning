@@ -1,4 +1,4 @@
-import type { Game } from "packages/shared";
+import type { Game } from "@mult/shared";
 import { useNavigate } from "react-router-dom";
 
 interface GameListProps {

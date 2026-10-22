@@ -1,5 +1,5 @@
+import type { Game, GameConfig, GamePatch } from "@mult/shared";
 import { eq } from "drizzle-orm";
-import type { Game, GameConfig, GamePatch } from "packages/shared";
 import type { Db } from "../db/client.js";
 import { type GameRow, games } from "../db/schema.js";
 import { notFound } from "../errors.js";

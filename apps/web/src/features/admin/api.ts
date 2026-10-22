@@ -13,7 +13,7 @@ import {
   gamesListSchema,
   leaderboardSchema,
   updateUserRequestSchema,
-} from "packages/shared";
+} from "@mult/shared";
 import { api } from "../../lib/api-client";
 
 export function fetchAdminUsers(): Promise<AdminUser[]> {

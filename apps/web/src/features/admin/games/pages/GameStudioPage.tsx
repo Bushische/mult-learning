@@ -1,4 +1,4 @@
-import type { Game, GameConfig } from "packages/shared";
+import type { Game, GameConfig } from "@mult/shared";
 import { useState } from "react";
 import { queryClient } from "../../../../lib/query-client";
 import { useAdminGames } from "../../hooks/useAdminData";

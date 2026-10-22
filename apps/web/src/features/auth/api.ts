@@ -1,4 +1,4 @@
-import { type LoginResponse, loginRequestSchema, loginResponseSchema } from "packages/shared";
+import { type LoginResponse, loginRequestSchema, loginResponseSchema } from "@mult/shared";
 import { api } from "../../lib/api-client";
 import { useAuthStore } from "../../stores/auth-store";
 

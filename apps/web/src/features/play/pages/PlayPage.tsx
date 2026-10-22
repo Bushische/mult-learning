@@ -1,4 +1,4 @@
-import type { Game } from "packages/shared";
+import type { Game } from "@mult/shared";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppHeader } from "../../dashboard/components/AppHeader";

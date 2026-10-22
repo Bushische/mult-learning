@@ -1,4 +1,3 @@
-import type { FastifyInstance } from "fastify";
 import {
   adminUserSchema,
   adminUsersListSchema,
@@ -6,7 +5,8 @@ import {
   createUserRequestSchema,
   gameIdsListSchema,
   updateUserRequestSchema,
-} from "packages/shared";
+} from "@mult/shared";
+import type { FastifyInstance } from "fastify";
 import { requireAdmin } from "../../plugins/auth.js";
 import {
   createUser,

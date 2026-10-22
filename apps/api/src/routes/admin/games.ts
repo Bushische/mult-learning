@@ -1,4 +1,3 @@
-import type { FastifyInstance } from "fastify";
 import {
   adminDailyRowsSchema,
   adminStatsDailyQuerySchema,
@@ -7,7 +6,8 @@ import {
   gameSchema,
   gamesListSchema,
   leaderboardSchema,
-} from "packages/shared";
+} from "@mult/shared";
+import type { FastifyInstance } from "fastify";
 import { requireAdmin } from "../../plugins/auth.js";
 import {
   createGame,

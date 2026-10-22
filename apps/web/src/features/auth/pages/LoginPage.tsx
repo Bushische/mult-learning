@@ -1,4 +1,4 @@
-import type { LoginGridUser } from "packages/shared";
+import type { LoginGridUser } from "@mult/shared";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { loginWithPin } from "../api";

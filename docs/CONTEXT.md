@@ -15,17 +15,22 @@ laptop, no CI/CD. Vision: docs/TASK.md; screens: docs/PROJECT.md.
 
 ## Repo layout (pnpm workspaces)
 - `apps/api` — Fastify + TypeScript + Drizzle ORM + better-sqlite3 (SQLite in-process, WAL).
-  Status: skeleton until T2/T3 land.
+  Complete: config, error contract, db layer, auth, games, answers, stats, admin routes.
 - `apps/web` — React 18 + Vite + TS; Tailwind; TanStack Query v5; Zustand; PWA via
-  `vite-plugin-pwa`. Status: skeleton until T10 lands.
+  `vite-plugin-pwa`. Complete: login, dashboard, play loop, admin panel, game studio.
 - `packages/shared` — zod schemas + DTO types (both apps import; the ONLY place for shared
-  types). Status: contracts in T1.
+  types). The npm package name is `@mult/shared` (a slash in a bare specifier breaks the
+  Node ESM resolver); the folder stays `packages/shared/`.
 - `docker-compose.yml` (dev; api + web). `docker-compose.override.yml` → `./local-data`.
+- `docker-compose.prod.yml` (prod: api 128m + nginx web 32m, port 8080).
 
 ## Commands
 - `pnpm install` / `pnpm lint` (Biome) / `pnpm test` (vitest, root run covers all packages).
 - Targeted tests: `pnpm vitest run <file>`. Dev: `pnpm --filter api dev`, `pnpm --filter web dev`.
-- db: `pnpm --filter api db:generate|db:migrate|db:seed` (seed: admin `admin` + demo child + 2 games).
+- db: `pnpm --filter api db:generate|db:migrate|db:seed` (seed: admin `admin`/1289 +
+  demo child `child1`/2468 + 2 games).
+- deploy: `scripts/build-images.sh` (arm64 images), `scripts/deploy.sh [--nas host|--seed|--smoke]`,
+  `scripts/smoke.sh`, `scripts/backup.sh`; `pnpm check:pwa` (built PWA check), `pnpm icons`.
 
 ## Non-negotiable constraints
 - RAM budget: containers < 150 MB total (api 128m, web 32m). No db server ever. Cold start < 5 s.
@@ -40,8 +45,10 @@ laptop, no CI/CD. Vision: docs/TASK.md; screens: docs/PROJECT.md.
   `db.transaction`.
 - Errors: `FastifyHttpError(status, code, message)` → `{ "error": { "code", "message" } }`;
   codes: VALIDATION_ERROR 400, UNAUTHORIZED 401, FORBIDDEN 403, NOT_FOUND 404, CONFLICT 409.
-- Auth: bcrypt-hashed 4-digit PIN; access JWT 15 min (`{ sub, role }`) + refresh cookie 30 d
-  (`HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/api/auth`, rotated, sha256-hashed in DB).
+- Auth: bcrypt-hashed 4-digit PIN; access JWT 15 min (`{ sub, role }`, signed with
+  HMAC(jwtSecret, user.pin_hash) → a PIN change invalidates old sessions) + refresh cookie 30 d
+  (`HttpOnly`, `SameSite=Strict`, `Path=/api/auth`, `Secure` in production, rotated,
+  sha256-hashed in the `refresh_tokens` table).
 - Public: `/health`, `GET /users` (login grid), `/auth/login|refresh|logout`. All other
   endpoints require auth; `/admin/*` requires `requireAdmin` (re-reads the users row fresh).
 

@@ -1,4 +1,4 @@
-import { type AnswerResponse, answerRequestSchema, answerResponseSchema } from "packages/shared";
+import { type AnswerResponse, answerRequestSchema, answerResponseSchema } from "@mult/shared";
 import { api } from "../../lib/api-client";
 import { queryClient } from "../../lib/query-client";
 

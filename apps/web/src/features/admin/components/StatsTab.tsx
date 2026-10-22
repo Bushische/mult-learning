@@ -1,4 +1,4 @@
-import type { AdminDailyRow } from "packages/shared";
+import type { AdminDailyRow } from "@mult/shared";
 import { useState } from "react";
 import { formatBank } from "../../dashboard/lib/format";
 
