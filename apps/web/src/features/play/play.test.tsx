@@ -720,8 +720,7 @@ describe("T31 — feedback shows the seconds won or lost", () => {
 
     const feedback = await screen.findByTestId("feedback");
     expect(feedback).toHaveTextContent("Correct!");
-    expect(feedback).toHaveTextContent("+0:10");
-    expect(feedback).toHaveTextContent("👍");
+    expect(screen.getByTestId("feedback-delta")).toHaveTextContent("⏰ +0:10 👍");
   });
 
   it("case 2: a wrong answer shows the taken seconds", async () => {
@@ -740,8 +739,7 @@ describe("T31 — feedback shows the seconds won or lost", () => {
 
     const feedback = await screen.findByTestId("feedback");
     expect(feedback).toHaveTextContent(`The answer was ${rightAnswer}`);
-    expect(feedback).toHaveTextContent("−0:05");
-    expect(feedback).toHaveTextContent("😒");
+    expect(screen.getByTestId("feedback-delta")).toHaveTextContent("⏰ −0:05 😒");
   });
 
   it("case 3: a timeout shows the penalty seconds", async () => {
@@ -756,7 +754,7 @@ describe("T31 — feedback shows the seconds won or lost", () => {
 
     const feedback = await screen.findByTestId("feedback");
     expect(feedback).toHaveTextContent("The answer was");
-    expect(feedback).toHaveTextContent("−0:05");
+    expect(screen.getByTestId("feedback-delta")).toHaveTextContent("⏰ −0:05 😒");
   });
 
   it("case 4: a late correct answer shows the decayed reward", async () => {
@@ -774,7 +772,7 @@ describe("T31 — feedback shows the seconds won or lost", () => {
 
     const feedback = await screen.findByTestId("feedback");
     expect(feedback).toHaveTextContent("Correct!");
-    expect(feedback).toHaveTextContent("+0:05");
+    expect(screen.getByTestId("feedback-delta")).toHaveTextContent("⏰ +0:05 👍");
   });
 });
 

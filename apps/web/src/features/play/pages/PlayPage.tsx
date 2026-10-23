@@ -314,8 +314,19 @@ export function PlayPage({ gameId, questionSeconds }: PlayPageProps) {
             data-testid="feedback"
           >
             {lastCorrect
-              ? `Correct! +${formatDuration(lastDelta ?? 0)} 👍`
-              : `The answer was ${serverRightAnswer ?? question?.rightAnswer ?? 0} −${formatDuration(Math.abs(lastDelta ?? 0))} 😒`}
+              ? "Correct!"
+              : `The answer was ${serverRightAnswer ?? question?.rightAnswer ?? 0}`}
+          </p>
+        ) : null}
+
+        {phase === "feedback" && lastDelta !== null ? (
+          <p
+            data-testid="feedback-delta"
+            className="mx-auto w-fit rounded-xl border-2 border-slate-300 bg-white px-4 py-1 text-center text-xl font-bold text-slate-800"
+          >
+            {lastCorrect
+              ? `⏰ +${formatDuration(lastDelta)} 👍`
+              : `⏰ −${formatDuration(Math.abs(lastDelta))} 😒`}
           </p>
         ) : null}
 
