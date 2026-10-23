@@ -1,7 +1,8 @@
-import type { DailyStats, HeatmapCell, HeatmapResponse } from "@mult/shared";
+import type { DailyStats, HeatmapCell, HeatmapResponse, PerGameDailyResponse } from "@mult/shared";
 import { and, eq, gte } from "drizzle-orm";
 import type { Db } from "../db/client.js";
-import { dailyStats, matrixStats, users } from "../db/schema.js";
+import { dailyStats, gameDailyStats, matrixStats, users } from "../db/schema.js";
+import { notFound } from "../errors.js";
 import { listGamesForUser } from "./gameService.js";
 
 /** The rolling window length: 7 days. */
@@ -95,5 +96,46 @@ export function getDailyStats(db: Db, userId: string, now: Date = new Date()): D
     correctTries: row?.correctTries ?? 0,
     timeEarnedSeconds: row?.timeEarnedSeconds ?? 0,
     timeBankSeconds: user?.timeBankSeconds ?? 0,
+  };
+}
+
+/**
+ * Per-day per-game matrix for one user: the last `days` UTC dates ending today
+ * (oldest first), each with the games that have recorded answers that day.
+ * Shared by the child home screen (T30) and the admin child-stats page (T28).
+ */
+export function getPerGameDaily(
+  db: Db,
+  userId: string,
+  days = 7,
+  now: Date = new Date(),
+): PerGameDailyResponse {
+  const user = db.select().from(users).where(eq(users.id, userId)).get();
+  if (!user) throw notFound("User not found");
+
+  const dates: string[] = [];
+  for (let offset = days - 1; offset >= 0; offset -= 1) {
+    const day = new Date(now.getTime() - offset * 24 * 60 * 60 * 1000);
+    dates.push(day.toISOString().slice(0, 10));
+  }
+  const rows = db
+    .select()
+    .from(gameDailyStats)
+    .where(and(eq(gameDailyStats.userId, userId), gte(gameDailyStats.date, dates[0] as string)))
+    .all();
+  return {
+    user: { id: user.id, username: user.username, timeBankSeconds: user.timeBankSeconds },
+    days: dates.map((date) => ({
+      date,
+      games: rows
+        .filter((row) => row.date === date)
+        .map((row) => ({
+          gameId: row.gameId,
+          totalTries: row.totalTries,
+          correctTries: row.correctTries,
+          timeEarnedSeconds: row.timeEarnedSeconds,
+        }))
+        .sort((a, b) => a.gameId.localeCompare(b.gameId)),
+    })),
   };
 }

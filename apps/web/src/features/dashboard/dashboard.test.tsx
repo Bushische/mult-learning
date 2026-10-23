@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 import "../../test/setup";
@@ -147,7 +147,7 @@ describe("T11 — dashboard", () => {
     expect(cell).toHaveAttribute("aria-label", expect.stringContaining("no tries"));
   });
 
-  it("case 4: the daily card shows today's tries, correct answers and earned seconds", async () => {
+  it("case 4: the today card shows earned time big and correct/attempts gray", async () => {
     createApiStub({
       "GET /me": () => ({
         data: { id: "u-child", username: "child1", role: "user", timeBankSeconds: 45 },
@@ -163,14 +163,16 @@ describe("T11 — dashboard", () => {
         },
       }),
       "GET /games": () => ({ data: GAMES }),
+      "GET /stats/per-game": () => ({
+        data: { user: { id: "u-child", username: "child1", timeBankSeconds: 45 }, days: [] },
+      }),
     });
     renderApp("/");
 
     await waitFor(() => {
-      expect(screen.getByTestId("daily-tries")).toHaveTextContent("6 tries");
+      expect(screen.getByTestId("daily-earned")).toHaveTextContent("+0:20");
     });
-    expect(screen.getByTestId("daily-tries")).toHaveTextContent("2 correct");
-    expect(screen.getByTestId("daily-earned")).toHaveTextContent("+0:20 today");
+    expect(screen.getByTestId("daily-tries")).toHaveTextContent("2/6 correct today");
   });
 
   it("case 5: every assigned game shows its economics and opens the play screen", async () => {
@@ -253,5 +255,108 @@ describe("T11 — dashboard", () => {
     await user.click(screen.getByTestId("header-admin"));
     expect(await screen.findByTestId("admin-tabs")).toBeInTheDocument();
     expect(screen.getByTestId("header-admin")).toHaveTextContent("Dashboard");
+  });
+});
+
+describe("T30 — child home redesign", () => {
+  const isoDate = (ago: number): string =>
+    new Date(Date.now() - ago * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+  function perGamePayload() {
+    const g = (
+      gameId: string,
+      totalTries: number,
+      correctTries: number,
+      timeEarnedSeconds: number,
+    ) => ({ gameId, totalTries, correctTries, timeEarnedSeconds });
+    return {
+      user: { id: "u-child", username: "child1", timeBankSeconds: 45 },
+      days: [
+        { date: isoDate(6), games: [] },
+        { date: isoDate(5), games: [] },
+        { date: isoDate(4), games: [] },
+        { date: isoDate(3), games: [g("g-easy", 4, 3, 30)] },
+        { date: isoDate(2), games: [] },
+        { date: isoDate(1), games: [g("g-easy", 2, 2, 20), g("g-mixed", 1, 0, 0)] },
+        { date: isoDate(0), games: [g("g-easy", 2, 1, 10), g("g-mixed", 1, 1, 10)] },
+      ],
+    };
+  }
+
+  function dashboardStub() {
+    return createApiStub({
+      "GET /me": () => ({
+        data: { id: "u-child", username: "child1", role: "user", timeBankSeconds: 45 },
+      }),
+      "GET /stats/heatmap": () => ({
+        data: {
+          cells: [{ a: 2, b: 5, tries: 1, correct: 1, accuracy: 1, color: "green" }],
+        },
+      }),
+      "GET /stats/daily": () => ({
+        data: {
+          date: "2026-10-22",
+          totalTries: 3,
+          correctTries: 2,
+          timeEarnedSeconds: 20,
+          timeBankSeconds: 45,
+        },
+      }),
+      "GET /games": () => ({ data: GAMES }),
+      "GET /stats/per-game": () => ({ data: perGamePayload() }),
+    });
+  }
+
+  it("case 1: the today card leads with big earned time and gray correct/attempts", async () => {
+    dashboardStub();
+    renderApp("/");
+
+    expect(await screen.findByTestId("daily-card")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId("daily-earned")).toHaveTextContent("+0:20");
+    });
+    expect(screen.getByTestId("daily-tries")).toHaveTextContent("2/3 correct today");
+  });
+
+  it("case 2: every game row shows today's earned and correct/attempts", async () => {
+    dashboardStub();
+    renderApp("/");
+
+    expect(await screen.findByTestId("game-g-easy")).toHaveTextContent("Easy Twos");
+    expect(screen.getByTestId("game-today-g-easy")).toHaveTextContent("+0:10");
+    expect(screen.getByTestId("game-today-g-easy")).toHaveTextContent("1/2");
+    expect(screen.getByTestId("game-today-g-mixed")).toHaveTextContent("1/1");
+  });
+
+  it("case 3: the history lists active days with date, gain and correct/attempts", async () => {
+    dashboardStub();
+    renderApp("/");
+
+    const history = await screen.findByTestId("history-list");
+    expect(within(history).getAllByTestId(/^history-day-/)).toHaveLength(3);
+    const row = screen.getByTestId(`history-day-${isoDate(3)}`);
+    expect(row).toHaveTextContent("+0:30");
+    expect(row).toHaveTextContent("3/4");
+    expect(screen.queryByTestId(`history-day-${isoDate(2)}`)).toBeNull();
+  });
+
+  it("case 4: the heatmap still renders below the history", async () => {
+    dashboardStub();
+    renderApp("/");
+
+    await screen.findByTestId("history-list");
+    expect(screen.getByTestId("heatmap")).toBeInTheDocument();
+    const main = screen.getByTestId("history-list").closest("main") as HTMLElement;
+    expect(main.textContent?.indexOf("Last 7 days") ?? -1).toBeLessThan(
+      main.textContent?.indexOf("Heatmap") ?? Number.MAX_SAFE_INTEGER,
+    );
+  });
+
+  it("case 5: offline APIs show the banner and no section crashes", async () => {
+    createApiStub({});
+    renderApp("/");
+
+    expect(await screen.findByTestId("offline-banner")).toBeInTheDocument();
+    expect(screen.queryByTestId("daily-earned")).toHaveTextContent("+0:00");
   });
 });

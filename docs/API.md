@@ -81,6 +81,8 @@
   `red` accuracy < 0.5, `mixed` in between, `none` when tries = 0. Cells cover the game's A×B range
   (`allowedCombinations` when set).
 - **GET /stats/daily** (auth) → `{ "date":"YYYY-MM-DD", "totalTries": n, "correctTries": n, "timeEarnedSeconds": n, "timeBankSeconds": n }`
+- **GET /stats/per-game?days=7** (auth, 1..14, default 7) → same day×game matrix shape as
+  the admin per-game endpoint, scoped to the signed-in user (oldest day first, today last).
 
 ## Admin (`requireAdmin`)
 

@@ -18,5 +18,6 @@ export async function submitAnswer(payload: {
   await queryClient.invalidateQueries({ queryKey: ["me"] });
   await queryClient.invalidateQueries({ queryKey: ["daily"] });
   await queryClient.invalidateQueries({ queryKey: ["heatmap"] });
+  await queryClient.invalidateQueries({ queryKey: ["per-game"] });
   return result;
 }

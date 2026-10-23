@@ -167,3 +167,45 @@ describe("T7 — stats read API", () => {
     expect(daily.statusCode).toBe(401);
   });
 });
+
+describe("T30 — child per-day per-game stats", () => {
+  it("case: the signed-in child's matrix reflects posted answers; anonymous is 401", async () => {
+    const easy = ctx.db.select().from(games).where(eq(games.name, "Easy Twos")).get();
+    const mixed = ctx.db.select().from(games).where(eq(games.name, "Mixed Table")).get();
+
+    const post = (gameId: string, factorA: number, factorB: number, chosen: number | null) =>
+      ctx.app.inject({
+        method: "POST",
+        url: "/api/answers",
+        headers: { authorization: `Bearer ${token}` },
+        payload: { gameId, factorA, factorB, chosen, elapsedMs: 0 },
+      });
+    expect((await post(easy?.id as string, 3, 4, 12)).statusCode).toBe(200);
+    expect((await post(mixed?.id as string, 5, 5, 25)).statusCode).toBe(200);
+
+    const response = await ctx.app.inject({
+      method: "GET",
+      url: "/api/stats/per-game",
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.days).toHaveLength(7);
+    const today = body.days[body.days.length - 1];
+    expect(today.games).toContainEqual({
+      gameId: easy?.id,
+      totalTries: 1,
+      correctTries: 1,
+      timeEarnedSeconds: 10,
+    });
+    expect(today.games).toContainEqual({
+      gameId: mixed?.id,
+      totalTries: 1,
+      correctTries: 1,
+      timeEarnedSeconds: 10,
+    });
+
+    const anon = await ctx.app.inject({ method: "GET", url: "/api/stats/per-game" });
+    expect(anon.statusCode).toBe(401);
+  });
+});
