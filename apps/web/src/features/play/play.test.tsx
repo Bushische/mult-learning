@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "../../test/setup";
 import type { Game } from "@mult/shared";
-import { computeRewardSeconds } from "@mult/shared";
+import { computeRewardSeconds, matchingMagicRules } from "@mult/shared";
 import { useAuthStore } from "../../stores/auth-store";
 import { createApiStub, renderApp, resetSession } from "../../test/harness";
 import { CountdownBar } from "./components/CountdownBar";
@@ -775,5 +775,89 @@ describe("T31 — feedback shows the seconds won or lost", () => {
     const feedback = await screen.findByTestId("feedback");
     expect(feedback).toHaveTextContent("Correct!");
     expect(feedback).toHaveTextContent("+0:05");
+  });
+});
+
+describe("T32 — common shared magic rules plus per-game rules", () => {
+  it("case 1: a ×10 question shows the shared rule on a correct answer", async () => {
+    bank = 0;
+    apiStub();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderApp("/play/g-ten");
+    await startQuestion();
+
+    const { a, b } = readFactors();
+    expect(a).toBe(10);
+    await user.click(screen.getByTestId(`answer-${a * b}`));
+    await screen.findByTestId("feedback");
+
+    const card = await screen.findByTestId("magic-rule");
+    const candidates = matchingMagicRules(a, b, GAME.hints);
+    expect(candidates.length).toBeGreaterThan(0);
+    expect(candidates.some((rule) => card.textContent?.includes(rule.text))).toBe(true);
+  });
+
+  it("case 2: the game's own rule shows for its factor on a wrong answer", async () => {
+    const hintGame: Game = {
+      ...GAME,
+      id: "g-hint",
+      name: "Hint",
+      rangeA: { min: 3, max: 3 },
+      rangeB: { min: 7, max: 7 },
+      hints: [{ factor: 3, text: "Triple trick" }],
+    };
+    apiStub({ "GET /games": () => ({ data: [hintGame] }) });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderApp("/play/g-hint");
+    await startQuestion();
+
+    const { a, b } = readFactors();
+    expect([a, b]).toContain(3);
+    const wrongButton = screen
+      .getAllByTestId(/^answer-/)
+      .find((button) => button.textContent !== String(a * b)) as HTMLElement;
+    await user.click(wrongButton);
+    await screen.findByTestId("feedback");
+
+    expect(await screen.findByTestId("magic-rule")).toHaveTextContent("Triple trick");
+  });
+
+  it("case 4: a question matching no rule renders no card", async () => {
+    const plainGame: Game = {
+      ...GAME,
+      id: "g-plain",
+      name: "Plain",
+      rangeA: { min: 3, max: 3 },
+      rangeB: { min: 7, max: 7 },
+      hints: [],
+    };
+    apiStub({ "GET /games": () => ({ data: [plainGame] }) });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderApp("/play/g-plain");
+    await startQuestion();
+
+    const { a, b } = readFactors();
+    await user.click(screen.getByTestId(`answer-${a * b}`));
+    await screen.findByTestId("feedback");
+
+    expect(screen.queryByTestId("magic-rule")).toBeNull();
+  });
+
+  it("case 5: a timeout on a matching question still shows the rule card", async () => {
+    bank = 45;
+    apiStub();
+    renderApp("/play/g-ten");
+    await startQuestion();
+
+    act(() => {
+      vi.advanceTimersByTime(16_000);
+    });
+
+    await screen.findByTestId("feedback");
+    const card = await screen.findByTestId("magic-rule");
+    const { b } = readFactors();
+    const candidates = matchingMagicRules(10, b, GAME.hints);
+    expect(candidates.length).toBeGreaterThan(0);
+    expect(candidates.some((rule) => card.textContent?.includes(rule.text))).toBe(true);
   });
 });

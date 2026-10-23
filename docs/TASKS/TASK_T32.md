@@ -3,8 +3,7 @@
 - **Goal:** every game teaches shortcuts from one shared rule set, while a game can still add its own rules; one matching rule card shows on every answer.
 - **Inputs:** `apps/web/src/features/play/pages/PlayPage.tsx` (hint memo, `HintBubble`, feedback buttons), `Game.hints` (per-game rules today), `packages/shared/src/index.ts` (home for the shared rule list so games and tests import one source).
 - **Outputs:** a shared rule set (factor-based, applied to all games) merged with the game's own rules; per-question random pick among all matching rules; a rule card rendered below the Stop/Finish buttons on both correct and wrong feedback.
-- **Starter rule set** (factor → card text; matching when the factor is either side of the question):
-  - 0 → "Times 0 — the answer is always 0."
+- **Starter rule set** (factor → card text; matching when the factor is either side of the question; factors stay in the 1..20 game range):
   - 1 → "Times 1 — the number stays the same."
   - 2 → "Times 2 — just double it: 7 × 2 = 7 + 7."
   - 4 → "Times 4 — double it, then double again."

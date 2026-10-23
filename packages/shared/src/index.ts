@@ -95,6 +95,49 @@ export const gameHintSchema = z.object({
 });
 export type GameHint = z.infer<typeof gameHintSchema>;
 
+/** One shared magic rule: a factor shortcut that applies to every game. */
+export const magicRuleSchema = z.object({
+  factor: factorSchema,
+  text: z.string().trim().min(1).max(200),
+});
+export type MagicRule = z.infer<typeof magicRuleSchema>;
+
+/**
+ * Starter set of shared magic rules (T32). Each fires when its factor is
+ * either side of the question; per-game `hints` extend this list.
+ */
+export const SHARED_MAGIC_RULES: MagicRule[] = [
+  { factor: 1, text: "Times 1 — the number stays the same." },
+  { factor: 2, text: "Times 2 — just double it: 7 × 2 = 7 + 7." },
+  { factor: 4, text: "Times 4 — double it, then double again." },
+  { factor: 5, text: "Times 5 — take times 10, then half: 7 × 5 = 70 ÷ 2." },
+  { factor: 9, text: "Times 9 — take times 10, then subtract once: 7 × 9 = 70 − 7." },
+  { factor: 10, text: "Times 10 — just add a 0 at the end!" },
+];
+
+/** Every rule (shared first, then the game's own) matching this question. */
+export function matchingMagicRules(
+  factorA: number,
+  factorB: number,
+  gameHints: GameHint[] = [],
+): MagicRule[] {
+  return [...SHARED_MAGIC_RULES, ...gameHints].filter(
+    (rule) => rule.factor === factorA || rule.factor === factorB,
+  );
+}
+
+/** One matching rule text, picked with the injected RNG (deterministic in tests). */
+export function pickMagicRule(
+  factorA: number,
+  factorB: number,
+  gameHints: GameHint[] = [],
+  rng: () => number = Math.random,
+): string | null {
+  const matches = matchingMagicRules(factorA, factorB, gameHints);
+  if (matches.length === 0) return null;
+  return (matches[Math.floor(rng() * matches.length)] as MagicRule).text;
+}
+
 /** Full game payload as returned by `GET /games` and the admin game routes. */
 export const gameSchema = z.object({
   id: idSchema,

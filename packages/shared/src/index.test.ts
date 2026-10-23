@@ -6,6 +6,8 @@ import {
   computeRewardSeconds,
   gameConfigSchema,
   heatmapCellSchema,
+  matchingMagicRules,
+  pickMagicRule,
 } from "./index";
 
 const validGameConfig: GameConfig = {
@@ -87,5 +89,49 @@ describe("T23 — time-decayed reward helper", () => {
     ).toBe(60);
     const without = { ...validGameConfig, questionSeconds: undefined };
     expect(gameConfigSchema.parse(without).questionSeconds).toBe(15);
+  });
+});
+
+describe("T32 — shared magic rules", () => {
+  /** Tiny deterministic PRNG (mulberry32) for seed-pinned picks. */
+  function createRng(seed: number): () => number {
+    let state = seed >>> 0;
+    return () => {
+      state += 0x6d2b79f5;
+      let t = state;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  it("matches shared rules by either factor, then the game's own rules", () => {
+    const matches = matchingMagicRules(10, 4, [{ factor: 10, text: "Ten is great" }]);
+    expect(matches.map((rule) => rule.text)).toEqual([
+      "Times 4 — double it, then double again.",
+      "Times 10 — just add a 0 at the end!",
+      "Ten is great",
+    ]);
+  });
+
+  it("returns null when nothing matches", () => {
+    expect(matchingMagicRules(3, 7, [])).toEqual([]);
+  });
+
+  it("picks deterministically for a fixed seed and varies across seeds", () => {
+    const own = [{ factor: 10, text: "Ten is great" }];
+    const first = pickMagicRule(10, 4, own, createRng(7));
+    expect(pickMagicRule(10, 4, own, createRng(7))).toBe(first);
+    const seen = new Set(
+      Array.from({ length: 20 }, (_, seed) => pickMagicRule(10, 4, own, createRng(seed))),
+    );
+    expect(seen.size).toBeGreaterThan(1);
+    for (const text of seen) {
+      expect([
+        "Times 10 — just add a 0 at the end!",
+        "Times 4 — double it, then double again.",
+        "Ten is great",
+      ]).toContain(text);
+    }
   });
 });

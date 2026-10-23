@@ -1,4 +1,5 @@
 import type { Game } from "@mult/shared";
+import { pickMagicRule } from "@mult/shared";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppHeader } from "../../dashboard/components/AppHeader";
@@ -204,6 +205,12 @@ export function PlayPage({ gameId, questionSeconds }: PlayPageProps) {
     return match?.text ?? null;
   }, [game, question, phase]);
 
+  /** One magic rule per question: shared rules + the game's own, random pick. */
+  const magicRule = useMemo(() => {
+    if (!game || !question) return null;
+    return pickMagicRule(question.factorA, question.factorB, game.hints, rng);
+  }, [game, question]);
+
   if (!game) {
     return (
       <div className="min-h-screen">
@@ -332,6 +339,16 @@ export function PlayPage({ gameId, questionSeconds }: PlayPageProps) {
             </button>
           ) : null}
         </div>
+
+        {phase === "feedback" && magicRule ? (
+          <p
+            data-testid="magic-rule"
+            role="note"
+            className="mx-auto max-w-md rounded-2xl bg-violet-100 px-4 py-3 text-center text-lg font-semibold text-violet-900"
+          >
+            🪄 {magicRule}
+          </p>
+        ) : null}
       </main>
     </div>
   );
