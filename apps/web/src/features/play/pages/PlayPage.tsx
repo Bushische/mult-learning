@@ -56,6 +56,8 @@ export function PlayPage({ gameId, questionSeconds }: PlayPageProps) {
   const [lastCorrect, setLastCorrect] = useState<boolean | null>(null);
   /** The server's right answer for the submitted question (feedback copy). */
   const [serverRightAnswer, setServerRightAnswer] = useState<number | null>(null);
+  /** The signed seconds actually credited/taken by the last answer (feedback copy). */
+  const [lastDelta, setLastDelta] = useState<number | null>(null);
   /** True while the last submission failed (retry allowed, no verdict shown). */
   const [saveError, setSaveError] = useState(false);
   /** One question accepts exactly one submission: the first tap wins, the
@@ -80,6 +82,7 @@ export function PlayPage({ gameId, questionSeconds }: PlayPageProps) {
     setChosen(null);
     setLastCorrect(null);
     setServerRightAnswer(null);
+    setLastDelta(null);
     setSaveError(false);
     setAnswered(false);
     submittingRef.current = false;
@@ -164,6 +167,7 @@ export function PlayPage({ gameId, questionSeconds }: PlayPageProps) {
         setBank(result.timeBankSeconds);
         if (result.timeDelta > 0) setBankAdded((total) => total + result.timeDelta);
         setLastCorrect(result.correct);
+        setLastDelta(result.timeDelta);
         setServerRightAnswer(result.rightAnswer);
         setSaveError(false);
         setTries((total) => total + 1);
@@ -303,8 +307,8 @@ export function PlayPage({ gameId, questionSeconds }: PlayPageProps) {
             data-testid="feedback"
           >
             {lastCorrect
-              ? "Correct!"
-              : `The answer was ${serverRightAnswer ?? question?.rightAnswer ?? 0}`}
+              ? `Correct! +${formatDuration(lastDelta ?? 0)} 👍`
+              : `The answer was ${serverRightAnswer ?? question?.rightAnswer ?? 0} −${formatDuration(Math.abs(lastDelta ?? 0))} 😒`}
           </p>
         ) : null}
 

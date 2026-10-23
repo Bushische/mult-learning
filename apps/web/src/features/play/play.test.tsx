@@ -706,3 +706,74 @@ describe("T27 — single submission and honest feedback", () => {
     expect(stub.calls.filter((call) => call.url === "/api/answers")).toHaveLength(2);
   });
 });
+
+describe("T31 — feedback shows the seconds won or lost", () => {
+  it("case 1: a fast correct answer shows the credited seconds", async () => {
+    bank = 0;
+    apiStub();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderApp("/play/g-easy");
+    await startQuestion();
+
+    const { a, b } = readFactors();
+    await user.click(screen.getByTestId(`answer-${a * b}`));
+
+    const feedback = await screen.findByTestId("feedback");
+    expect(feedback).toHaveTextContent("Correct!");
+    expect(feedback).toHaveTextContent("+0:10");
+    expect(feedback).toHaveTextContent("👍");
+  });
+
+  it("case 2: a wrong answer shows the taken seconds", async () => {
+    bank = 45;
+    apiStub();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderApp("/play/g-easy");
+    await startQuestion();
+
+    const { a, b } = readFactors();
+    const rightAnswer = a * b;
+    const wrongButton = screen
+      .getAllByTestId(/^answer-/)
+      .find((button) => button.textContent !== String(rightAnswer)) as HTMLElement;
+    await user.click(wrongButton);
+
+    const feedback = await screen.findByTestId("feedback");
+    expect(feedback).toHaveTextContent(`The answer was ${rightAnswer}`);
+    expect(feedback).toHaveTextContent("−0:05");
+    expect(feedback).toHaveTextContent("😒");
+  });
+
+  it("case 3: a timeout shows the penalty seconds", async () => {
+    bank = 45;
+    apiStub();
+    renderApp("/play/g-easy");
+    await startQuestion();
+
+    act(() => {
+      vi.advanceTimersByTime(16_000);
+    });
+
+    const feedback = await screen.findByTestId("feedback");
+    expect(feedback).toHaveTextContent("The answer was");
+    expect(feedback).toHaveTextContent("−0:05");
+  });
+
+  it("case 4: a late correct answer shows the decayed reward", async () => {
+    bank = 0;
+    apiStub();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderApp("/play/g-easy");
+    await startQuestion();
+
+    act(() => {
+      vi.advanceTimersByTime(9_000);
+    });
+    const { a, b } = readFactors();
+    await user.click(screen.getByTestId(`answer-${a * b}`));
+
+    const feedback = await screen.findByTestId("feedback");
+    expect(feedback).toHaveTextContent("Correct!");
+    expect(feedback).toHaveTextContent("+0:05");
+  });
+});
