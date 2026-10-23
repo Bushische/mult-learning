@@ -18,6 +18,27 @@ export function formatBank(seconds: number): string {
   return formatDuration(seconds);
 }
 
+/** Seconds lost to wrong answers: every miss costs the game's penalty. */
+export function lostSeconds(totalTries: number, correctTries: number, timePenalty: number): number {
+  return Math.max(0, totalTries - correctTries) * Math.max(0, timePenalty);
+}
+
+/** Net gain: earned seconds minus lost seconds. May be negative (all misses). */
+export function netEarnedSeconds(
+  earnedSeconds: number,
+  totalTries: number,
+  correctTries: number,
+  timePenalty: number,
+): number {
+  return earnedSeconds - lostSeconds(totalTries, correctTries, timePenalty);
+}
+
+/** Signed clock value: `+M:SS`, `−M:SS`, or `+0:00` (no clamping). */
+export function formatSignedDuration(seconds: number): string {
+  const whole = Math.trunc(seconds);
+  return `${whole < 0 ? "−" : "+"}${formatDuration(Math.abs(whole))}`;
+}
+
 const SHORT_MONTHS = [
   "Jan",
   "Feb",

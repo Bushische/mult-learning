@@ -1,6 +1,6 @@
 import type { Game } from "@mult/shared";
 import { useNavigate } from "react-router-dom";
-import { formatDuration } from "../lib/format";
+import { formatDuration, formatSignedDuration, netEarnedSeconds } from "../lib/format";
 
 export interface GameToday {
   earnedSeconds: number;
@@ -26,8 +26,12 @@ export function GameList({ games, todayByGame = {} }: GameListProps) {
     <ul className="flex flex-col gap-3" data-testid="game-list">
       {games.map((game) => {
         const today = todayByGame[game.id] ?? { earnedSeconds: 0, correctTries: 0, totalTries: 0 };
-        const wrongTries = today.totalTries - today.correctTries;
-        const lostSeconds = wrongTries * game.timePenalty;
+        const net = netEarnedSeconds(
+          today.earnedSeconds,
+          today.totalTries,
+          today.correctTries,
+          game.timePenalty,
+        );
         return (
           <li
             key={game.id}
@@ -36,24 +40,20 @@ export function GameList({ games, todayByGame = {} }: GameListProps) {
           >
             <div className="flex flex-col gap-1">
               <p className="text-lg font-bold">{game.name}</p>
-              <p className="text-slate-600" data-testid={`game-economics-${game.id}`}>
-                +{game.baseTimeReward}s correct / −{game.timePenalty}s wrong
-              </p>
               <p className="font-semibold text-green-600" data-testid={`game-correct-${game.id}`}>
                 Correct{" "}
                 <span className="rounded-full bg-green-100 px-3 py-0.5 font-bold">
-                  +{formatDuration(today.earnedSeconds)}
+                  +{formatDuration(game.baseTimeReward)}
                 </span>
               </p>
               <p className="font-semibold text-red-600" data-testid={`game-wrong-${game.id}`}>
                 Wrong{" "}
                 <span className="rounded-full bg-pink-100 px-3 py-0.5 font-bold text-pink-700">
-                  −{formatDuration(lostSeconds)}
+                  −{formatDuration(game.timePenalty)}
                 </span>
               </p>
               <p className="text-slate-700" data-testid={`game-total-${game.id}`}>
-                Today: +{formatDuration(today.earnedSeconds)} ({today.correctTries}/
-                {today.totalTries})
+                Today: {formatSignedDuration(net)} ({today.correctTries}/{today.totalTries})
               </p>
             </div>
             <button

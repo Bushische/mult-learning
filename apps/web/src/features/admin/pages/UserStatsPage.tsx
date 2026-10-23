@@ -1,7 +1,8 @@
 import { Link, useParams } from "react-router-dom";
 import { AppHeader } from "../../dashboard/components/AppHeader";
 import { HeatmapGrid } from "../../dashboard/components/HeatmapGrid";
-import { formatDayLabel, formatDuration } from "../../dashboard/lib/format";
+import { summarizeDay } from "../../dashboard/lib/daySummary";
+import { formatDayLabel, formatDuration, formatSignedDuration } from "../../dashboard/lib/format";
 import {
   useAdminGames,
   useAdminPerGame,
@@ -49,18 +50,19 @@ export function UserStatsPage() {
   }
 
   const assignedGames = (games ?? []).filter((game) => user.games.includes(game.id));
+  const gamesById = new Map((games ?? []).map((game) => [game.id, game]));
   const summary = stats?.last7Days;
   const days = perGame?.days ?? [];
   const todayEntry = days[days.length - 1];
-  const todayTotals = todayEntry?.totals ?? {
-    totalTries: 0,
+  const today = summarizeDay(todayEntry, gamesById, {
+    earnedSeconds: 0,
     correctTries: 0,
-    timeEarnedSeconds: 0,
-  };
+    totalTries: 0,
+  });
   const todayGames = todayEntry?.games ?? [];
-  const todayEarned = todayTotals.timeEarnedSeconds;
-  const todayTries = todayTotals.totalTries;
-  const todayCorrect = todayTotals.correctTries;
+  const todayEarned = today.earnedSeconds;
+  const todayTries = today.totalTries;
+  const todayCorrect = today.correctTries;
 
   return (
     <div className="min-h-screen">
@@ -71,7 +73,7 @@ export function UserStatsPage() {
             {user.username}
           </h2>
           <p className="text-2xl font-black text-slate-900" data-testid="user-stats-today">
-            +{formatDuration(todayEarned)}{" "}
+            {formatSignedDuration(todayEarned)}{" "}
             <span className="text-base font-semibold text-slate-500">today</span>
           </p>
           <p className="text-sm text-slate-500">
@@ -121,30 +123,37 @@ export function UserStatsPage() {
                 </tr>
               </thead>
               <tbody>
-                {days.map((day) => (
-                  <tr key={day.date} data-testid={`week-row-${day.date}`}>
-                    <td className="py-2 font-semibold">{formatDayLabel(day.date)}</td>
-                    <td className="py-2 font-semibold" data-testid={`week-total-${day.date}`}>
-                      {day.totals.totalTries > 0
-                        ? `+${formatDuration(day.totals.timeEarnedSeconds)} · ${day.totals.correctTries}/${day.totals.totalTries}`
-                        : "—"}
-                    </td>
-                    {assignedGames.map((game) => {
-                      const entry = day.games.find((row) => row.gameId === game.id);
-                      return (
-                        <td
-                          key={game.id}
-                          className="py-2"
-                          data-testid={`week-cell-${day.date}-${game.id}`}
-                        >
-                          {entry
-                            ? `+${formatDuration(entry.timeEarnedSeconds)} · ${entry.correctTries}/${entry.totalTries}`
-                            : "—"}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
+                {days.map((day) => {
+                  const summary = summarizeDay(day, gamesById, {
+                    earnedSeconds: 0,
+                    correctTries: 0,
+                    totalTries: 0,
+                  });
+                  return (
+                    <tr key={day.date} data-testid={`week-row-${day.date}`}>
+                      <td className="py-2 font-semibold">{formatDayLabel(day.date)}</td>
+                      <td className="py-2 font-semibold" data-testid={`week-total-${day.date}`}>
+                        {summary.totalTries > 0
+                          ? `${formatSignedDuration(summary.earnedSeconds)} · ${summary.correctTries}/${summary.totalTries}`
+                          : "—"}
+                      </td>
+                      {assignedGames.map((game) => {
+                        const entry = day.games.find((row) => row.gameId === game.id);
+                        return (
+                          <td
+                            key={game.id}
+                            className="py-2"
+                            data-testid={`week-cell-${day.date}-${game.id}`}
+                          >
+                            {entry
+                              ? `+${formatDuration(entry.timeEarnedSeconds)} · ${entry.correctTries}/${entry.totalTries}`
+                              : "—"}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </section>

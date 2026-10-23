@@ -200,9 +200,8 @@ describe("T11 — dashboard", () => {
     renderApp("/");
 
     expect(await screen.findByText("Easy Twos")).toBeInTheDocument();
-    expect(screen.getByTestId("game-economics-g-easy")).toHaveTextContent(
-      "+10s correct / −5s wrong",
-    );
+    expect(screen.getByTestId("game-correct-g-easy")).toHaveTextContent("+0:10");
+    expect(screen.getByTestId("game-wrong-g-easy")).toHaveTextContent("−0:05");
     expect(screen.getByText("Mixed Table")).toBeInTheDocument();
     // unassigned games never appear
     expect(screen.queryByText("Hard Sevens")).toBeNull();
@@ -330,12 +329,12 @@ describe("T30 — child home redesign", () => {
 
     expect(await screen.findByTestId("daily-card")).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByTestId("daily-earned")).toHaveTextContent("+0:20");
+      expect(screen.getByTestId("daily-earned")).toHaveTextContent("+0:15");
     });
     expect(screen.getByTestId("daily-tries")).toHaveTextContent("2/3 correct today");
   });
 
-  it("case 2: every game row shows today's earned and correct/attempts", async () => {
+  it("case 2: every game row shows prices and the net today total", async () => {
     dashboardStub();
     renderApp("/");
 
@@ -344,19 +343,19 @@ describe("T30 — child home redesign", () => {
     expect(screen.getByTestId("game-correct-g-easy")).toHaveTextContent("+0:10");
     expect(screen.getByTestId("game-wrong-g-easy")).toHaveTextContent("Wrong");
     expect(screen.getByTestId("game-wrong-g-easy")).toHaveTextContent("−0:05");
-    expect(screen.getByTestId("game-total-g-easy")).toHaveTextContent("Today: +0:10 (1/2)");
+    expect(screen.getByTestId("game-total-g-easy")).toHaveTextContent("Today: +0:05 (1/2)");
     expect(screen.getByTestId("game-total-g-mixed")).toHaveTextContent("Today: +0:10 (1/1)");
-    expect(screen.getByTestId("game-wrong-g-mixed")).toHaveTextContent("−0:00");
+    expect(screen.getByTestId("game-wrong-g-mixed")).toHaveTextContent("−0:05");
   });
 
-  it("case 3: the history lists active days with date, gain and correct/attempts", async () => {
+  it("case 3: the history lists active days with date, net gain and correct/attempts", async () => {
     dashboardStub();
     renderApp("/");
 
     const history = await screen.findByTestId("history-list");
     expect(within(history).getAllByTestId(/^history-day-/)).toHaveLength(3);
     const row = screen.getByTestId(`history-day-${isoDate(3)}`);
-    expect(row).toHaveTextContent("+0:30");
+    expect(row).toHaveTextContent("+0:25");
     expect(row).toHaveTextContent("3/4");
     expect(screen.queryByTestId(`history-day-${isoDate(2)}`)).toBeNull();
   });
@@ -382,7 +381,7 @@ describe("T30 — child home redesign", () => {
   });
 
   it("case 6: the today card refreshes on its own every 15 seconds", async () => {
-    let earned = 20;
+    const live = { tries: 2, correct: 1, earned: 10 };
     createApiStub({
       "GET /me": () => ({
         data: { id: "u-child", username: "child1", role: "user", timeBankSeconds: 45 },
@@ -391,14 +390,36 @@ describe("T30 — child home redesign", () => {
       "GET /stats/daily": () => ({
         data: {
           date: "2026-10-22",
-          totalTries: 3,
-          correctTries: 2,
-          timeEarnedSeconds: earned,
+          totalTries: 0,
+          correctTries: 0,
+          timeEarnedSeconds: 0,
           timeBankSeconds: 45,
         },
       }),
       "GET /games": () => ({ data: GAMES }),
-      "GET /stats/per-game": () => ({ data: perGamePayload() }),
+      "GET /stats/per-game": () => ({
+        data: {
+          user: { id: "u-child", username: "child1", timeBankSeconds: 45 },
+          days: [
+            {
+              date: "2026-10-22",
+              totals: {
+                totalTries: live.tries,
+                correctTries: live.correct,
+                timeEarnedSeconds: live.earned,
+              },
+              games: [
+                {
+                  gameId: "g-easy",
+                  totalTries: live.tries,
+                  correctTries: live.correct,
+                  timeEarnedSeconds: live.earned,
+                },
+              ],
+            },
+          ],
+        },
+      }),
     });
     renderApp("/");
 
@@ -407,16 +428,19 @@ describe("T30 — child home redesign", () => {
       await act(async () => {
         await vi.advanceTimersByTimeAsync(0);
       });
-      expect(screen.getByTestId("daily-earned")).toHaveTextContent("+0:20");
+      // net: 10 earned − 1 wrong × 5 penalty
+      expect(screen.getByTestId("daily-earned")).toHaveTextContent("+0:05");
 
-      earned = 50;
+      live.earned = 30;
+      live.tries = 4;
+      live.correct = 3;
       await act(async () => {
         await vi.advanceTimersByTimeAsync(16_000);
       });
     } finally {
       vi.useRealTimers();
     }
-    expect(screen.getByTestId("daily-earned")).toHaveTextContent("+0:50");
+    expect(screen.getByTestId("daily-earned")).toHaveTextContent("+0:25");
   });
 });
 
@@ -539,10 +563,10 @@ describe("T36 — per-game cards show correct / wrong / today total", () => {
     renderApp("/");
 
     expect(await screen.findByTestId("game-correct-g-easy")).toHaveTextContent("Correct");
-    expect(screen.getByTestId("game-correct-g-easy")).toHaveTextContent("+0:20");
+    expect(screen.getByTestId("game-correct-g-easy")).toHaveTextContent("+0:10");
     expect(screen.getByTestId("game-wrong-g-easy")).toHaveTextContent("Wrong");
     expect(screen.getByTestId("game-wrong-g-easy")).toHaveTextContent("−0:05");
-    expect(screen.getByTestId("game-total-g-easy")).toHaveTextContent("Today: +0:20 (2/3)");
+    expect(screen.getByTestId("game-total-g-easy")).toHaveTextContent("Today: +0:15 (2/3)");
   });
 
   it("cases 2-3: zero wrong and unplayed games show zeros", async () => {
@@ -550,7 +574,8 @@ describe("T36 — per-game cards show correct / wrong / today total", () => {
     renderApp("/");
 
     await screen.findByTestId("game-g-mixed");
-    expect(screen.getByTestId("game-wrong-g-mixed")).toHaveTextContent("−0:00");
+    // Wrong always shows the per-mistake price, even with no misses yet.
+    expect(screen.getByTestId("game-wrong-g-mixed")).toHaveTextContent("−0:05");
     expect(screen.getByTestId("game-total-g-mixed")).toHaveTextContent("Today: +0:00 (0/0)");
   });
 
@@ -580,6 +605,6 @@ describe("T36 — per-game cards show correct / wrong / today total", () => {
       state.correct = 2;
       state.earned = 20;
     }
-    expect(screen.getByTestId("game-total-g-easy")).toHaveTextContent("Today: +0:30 (3/4)");
+    expect(screen.getByTestId("game-total-g-easy")).toHaveTextContent("Today: +0:25 (3/4)");
   });
 });

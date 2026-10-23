@@ -551,7 +551,7 @@ describe("T28 — readable child stats with per-game results", () => {
     state.users.find((user) => user.username === "child1")!.games = ["g-easy", "g-mixed"];
     renderApp("/admin/users/u-child1/stats");
 
-    expect(await screen.findByTestId("user-stats-today")).toHaveTextContent("+0:20");
+    expect(await screen.findByTestId("user-stats-today")).toHaveTextContent("+0:15");
     expect(screen.getByTestId("user-stats-today")).toHaveTextContent("today");
     expect(screen.getByTestId("today-game-g-easy")).toHaveTextContent("Easy Twos");
     expect(screen.getByTestId("today-game-g-easy")).toHaveTextContent("+0:10");
@@ -576,6 +576,10 @@ describe("T28 — readable child stats with per-game results", () => {
     expect(played).toHaveTextContent("3/4");
     const idle = screen.getByTestId(`week-cell-${isoDate(2)}-g-easy`);
     expect(idle).toHaveTextContent("—");
+    // Played day: Total is net of penalties (30 earned − 1 wrong × 5).
+    const playedTotal = screen.getByTestId(`week-total-${isoDate(3)}`);
+    expect(playedTotal).toHaveTextContent("+0:25");
+    expect(playedTotal).toHaveTextContent("3/4");
     // Legacy day: the Total column shows the day's numbers, game cells stay dashed.
     const legacyTotal = screen.getByTestId(`week-total-${isoDate(4)}`);
     expect(legacyTotal).toHaveTextContent("+0:40");

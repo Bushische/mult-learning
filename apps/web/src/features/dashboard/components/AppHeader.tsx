@@ -1,29 +1,27 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { logout } from "../../auth/api";
 import { useMe } from "../hooks/useMe";
-import { formatBank, formatDuration } from "../lib/format";
+import { formatBank, formatSignedDuration } from "../lib/format";
 
 interface AppHeaderProps {
   title?: string;
   /**
-   * When set, the header pill shows today's earned time (child dashboard)
+   * When set, the header pill shows today's net gain (child dashboard)
    * instead of the lifetime bank. Admin and play screens omit it (bank stays).
    */
-  todayEarned?: number;
+  todayNet?: number;
 }
 
 /** Header: user name, today/bank pill, admin entry, logout. */
-export function AppHeader({ title, todayEarned }: AppHeaderProps) {
+export function AppHeader({ title, todayNet }: AppHeaderProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { data: me } = useMe();
   const isAdmin = me?.role === "admin";
   const onAdminPage = location.pathname.startsWith("/admin");
-  const pillTestId = todayEarned === undefined ? "header-bank" : "header-today";
+  const pillTestId = todayNet === undefined ? "header-bank" : "header-today";
   const pillText =
-    todayEarned === undefined
-      ? formatBank(me?.timeBankSeconds ?? 0)
-      : `+${formatDuration(todayEarned)}`;
+    todayNet === undefined ? formatBank(me?.timeBankSeconds ?? 0) : formatSignedDuration(todayNet);
 
   return (
     <header className="flex items-center justify-between gap-4 border-b border-slate-200 bg-white px-4 py-3">

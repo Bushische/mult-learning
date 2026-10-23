@@ -158,9 +158,8 @@ describe("T14 — admin game studio", () => {
 
     const view = renderApp("/");
     expect((await screen.findAllByText("Hard Sevens")).length).toBeGreaterThan(0);
-    expect(await screen.findByTestId(`game-economics-${created?.id}`)).toHaveTextContent(
-      "+10s correct / −5s wrong",
-    );
+    expect(await screen.findByTestId(`game-correct-${created?.id}`)).toHaveTextContent("+0:10");
+    expect(await screen.findByTestId(`game-wrong-${created?.id}`)).toHaveTextContent("−0:05");
     view.unmount();
 
     renderApp(`/play/${created?.id}`);
@@ -275,9 +274,8 @@ describe("T14 — admin game studio", () => {
     });
 
     const view = renderApp("/");
-    expect(await screen.findByTestId("game-economics-g-easy")).toHaveTextContent(
-      "+20s correct / −8s wrong",
-    );
+    expect(await screen.findByTestId("game-correct-g-easy")).toHaveTextContent("+0:20");
+    expect(await screen.findByTestId("game-wrong-g-easy")).toHaveTextContent("−0:08");
     view.unmount();
   });
 
