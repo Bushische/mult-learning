@@ -1,19 +1,29 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { logout } from "../../auth/api";
 import { useMe } from "../hooks/useMe";
-import { formatBank } from "../lib/format";
+import { formatBank, formatDuration } from "../lib/format";
 
 interface AppHeaderProps {
   title?: string;
+  /**
+   * When set, the header pill shows today's earned time (child dashboard)
+   * instead of the lifetime bank. Admin and play screens omit it (bank stays).
+   */
+  todayEarned?: number;
 }
 
-/** Header: user name, time bank, logout. Admins also get a link to /admin. */
-export function AppHeader({ title }: AppHeaderProps) {
+/** Header: user name, today/bank pill, admin entry, logout. */
+export function AppHeader({ title, todayEarned }: AppHeaderProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { data: me } = useMe();
   const isAdmin = me?.role === "admin";
   const onAdminPage = location.pathname.startsWith("/admin");
+  const pillTestId = todayEarned === undefined ? "header-bank" : "header-today";
+  const pillText =
+    todayEarned === undefined
+      ? formatBank(me?.timeBankSeconds ?? 0)
+      : `+${formatDuration(todayEarned)}`;
 
   return (
     <header className="flex items-center justify-between gap-4 border-b border-slate-200 bg-white px-4 py-3">
@@ -26,9 +36,9 @@ export function AppHeader({ title }: AppHeaderProps) {
       <div className="flex items-center gap-3">
         <span
           className="rounded-full bg-emerald-100 px-3 py-1 text-lg font-bold text-emerald-800"
-          data-testid="header-bank"
+          data-testid={pillTestId}
         >
-          {formatBank(me?.timeBankSeconds ?? 0)}
+          {pillText}
         </span>
         <button
           type="button"

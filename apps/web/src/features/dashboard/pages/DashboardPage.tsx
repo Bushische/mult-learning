@@ -34,7 +34,7 @@ export function DashboardPage() {
 
   return (
     <div className="min-h-screen">
-      <AppHeader title="Dashboard" />
+      <AppHeader title="Dashboard" todayEarned={dailyQuery.data?.timeEarnedSeconds ?? 0} />
       <main className="mx-auto flex max-w-4xl flex-col gap-6 p-4">
         {offline ? (
           <output

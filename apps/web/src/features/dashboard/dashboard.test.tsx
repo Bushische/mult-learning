@@ -49,7 +49,7 @@ beforeEach(() => {
 });
 
 describe("T11 — dashboard", () => {
-  it("case 1: the header shows the username, the bank as M:SS and logs out", async () => {
+  it("case 1: the header shows the username, today's earned as clock value and logs out", async () => {
     const stub = createApiStub({
       "GET /me": () => ({
         data: { id: "u-child", username: "child1", role: "user", timeBankSeconds: 2700 },
@@ -65,6 +65,9 @@ describe("T11 — dashboard", () => {
         },
       }),
       "GET /games": () => ({ data: GAMES }),
+      "GET /stats/per-game": () => ({
+        data: { user: { id: "u-child", username: "child1", timeBankSeconds: 2700 }, days: [] },
+      }),
       "POST /auth/logout": () => ({ data: { ok: true } }),
     });
     const user = userEvent.setup();
@@ -73,7 +76,8 @@ describe("T11 — dashboard", () => {
     await waitFor(() => {
       expect(screen.getByTestId("header-username")).toHaveTextContent("child1");
     });
-    expect(screen.getByTestId("header-bank")).toHaveTextContent("45:00");
+    expect(screen.getByTestId("header-today")).toHaveTextContent("+0:00");
+    expect(screen.queryByTestId("header-bank")).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Logout" }));
     expect(await screen.findByTestId("user-grid")).toBeInTheDocument();
@@ -409,5 +413,67 @@ describe("T30 — child home redesign", () => {
       vi.useRealTimers();
     }
     expect(screen.getByTestId("daily-earned")).toHaveTextContent("+0:50");
+  });
+});
+
+describe("T35 — dashboard header shows today's gain", () => {
+  function headerStub(earned: number, bank: number) {
+    return createApiStub({
+      "GET /me": () => ({
+        data: { id: "u-child", username: "child1", role: "user", timeBankSeconds: bank },
+      }),
+      "GET /stats/heatmap": () => ({ data: { cells: [] } }),
+      "GET /stats/daily": () => ({
+        data: {
+          date: "2026-10-22",
+          totalTries: 0,
+          correctTries: 0,
+          timeEarnedSeconds: earned,
+          timeBankSeconds: bank,
+        },
+      }),
+      "GET /games": () => ({ data: GAMES }),
+      "GET /stats/per-game": () => ({
+        data: { user: { id: "u-child", username: "child1", timeBankSeconds: bank }, days: [] },
+      }),
+    });
+  }
+
+  it("case 1: today's earned leads, lifetime bank is gone from the header", async () => {
+    headerStub(50, 453);
+    renderApp("/");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("header-today")).toHaveTextContent("+0:50");
+    });
+    expect(screen.queryByTestId("header-bank")).toBeNull();
+  });
+
+  it("case 2: a fresh child sees +0:00", async () => {
+    headerStub(0, 0);
+    renderApp("/");
+
+    expect(await screen.findByTestId("header-today")).toHaveTextContent("+0:00");
+  });
+
+  it("case 3: admin pages keep the bank pill", async () => {
+    resetSession();
+    useAuthStore.setState({
+      accessToken: "token-admin",
+      user: { id: "u-admin", username: "admin", role: "admin" },
+    });
+    createApiStub({
+      "GET /me": () => ({
+        data: { id: "u-admin", username: "admin", role: "admin", timeBankSeconds: 0 },
+      }),
+      "GET /admin/users": () => ({ data: [] }),
+      "GET /admin/games": () => ({ data: [] }),
+      "GET /admin/leaderboard": () => ({ data: { today: [], last7Days: [] } }),
+      "GET /admin/stats/daily": () => ({ data: [] }),
+    });
+    renderApp("/admin");
+
+    expect(await screen.findByTestId("header-bank")).toBeInTheDocument();
+    expect(screen.queryByTestId("header-today")).toBeNull();
   });
 });

@@ -73,7 +73,7 @@ describe("T10 — login flow", () => {
 
     expect(await screen.findByTestId("header-username")).toHaveTextContent("child1");
     await waitFor(() => {
-      expect(screen.getByTestId("header-bank")).toHaveTextContent("0:45");
+      expect(screen.getByTestId("header-today")).toHaveTextContent("+0:00");
     });
   });
 
