@@ -9,7 +9,7 @@ Two ways to open the app from the home network — pick one:
 
 | | A — HTTPS via Synology DNS (recommended) | B — plain HTTP (simplest) |
 |---|---|---|
-| URL | `https://mult.<you>.synology.me` | `http://<nas-ip>:18081` |
+| URL | `https://mult.<you>.synology.me:18443` | `http://<nas-ip>:18081` |
 | Setup | DDNS + free certificate + reverse proxy (§5) | none |
 | `NODE_ENV` | `production` | `development` (see box below) |
 | Login persistence | full (Secure cookie works over HTTPS) | full |
@@ -99,8 +99,9 @@ Everything happens in DSM — no router changes, no open ports.
    itself). Set it as default or assign it to the proxy in step 3.
 3. **Reverse proxy**: DSM → Control Panel → Login Portal → Advanced →
    Reverse Proxy → Create → Customise:
-   - Source: protocol **HTTPS**, hostname `mult-<you>.synology.me`, port **443**,
-     enable HSTS, assign the step-2 certificate.
+   - Source: protocol **HTTPS**, hostname `mult-<you>.synology.me`, port **18443**
+     (DSM reserves 443 for system use, so pick a custom port — any HTTPS port keeps
+     the secure context + Secure cookie working), enable HSTS, assign the step-2 certificate.
    - Destination: protocol **HTTP**, hostname `localhost`, port **18081**
      (must match `WEB_PORT` in `~/mult-learning/.env`).
 4. **Make the name resolve inside your LAN.** `synology.me` points at your public
@@ -111,24 +112,24 @@ Everything happens in DSM — no router changes, no open ports.
    - Or install the **DNS Server** package on the NAS, create a master zone
      `synology.me` with an A record for your hostname → NAS LAN IP, and point
      the tablets (or the router's DHCP DNS) at the NAS.
-   - Test from a laptop first: `https://mult-<you>.synology.me/api/health` must
+   - Test from a laptop first: `https://mult-<you>.synology.me:18443/api/health` must
      return `{"status":"ok"}` — on Wi-Fi **and** with no router tricks it fails,
      which tells you step 4 isn't done yet.
-5. **DSM firewall** (if enabled): allow TCP 443 from the LAN (and TCP 18081 too
+5. **DSM firewall** (if enabled): allow TCP 18443 from the LAN (and TCP 18081 too
    if you use the plain-HTTP option B URL directly).
 
 ## 5b. Remote access (away from home)
 
 Same Synology DNS name, one router change:
 
-1. **Port forwarding** on the router: external TCP **443** → `<nas-lan-ip>:443`.
+1. **Port forwarding** on the router: external TCP **18443** → `<nas-lan-ip>:18443`.
    No other ports (never expose DSM's 5000/5001 or SSH directly).
 2. **Lock down DSM**: Control Panel → Security → enable **Auto Block** (e.g. 5
    failed logins), turn on **2-factor authentication** for your DSM admin user,
    keep DSM + Container Manager updated.
-3. **DSM firewall** (if enabled): allow TCP 443 from all (the reverse proxy only
+3. **DSM firewall** (if enabled): allow TCP 18443 from all (the reverse proxy only
    serves the app hostname; DSM itself stays behind its own login).
-4. Test on **mobile data** (Wi-Fi off): `https://mult-<you>.synology.me/api/health`
+4. Test on **mobile data** (Wi-Fi off): `https://mult-<you>.synology.me:18443/api/health`
    → `{"status":"ok"}`, then log in and play a round.
 
 > Alternative without port forwarding: a Cloudflare tunnel (the grocery-list
@@ -189,7 +190,7 @@ only thing you can't rebuild.
 | `permission denied … /var/run/docker.sock` | user not in `docker` group → §3, then re-login |
 | Login works, session lost on reload (plain HTTP) | `NODE_ENV` is `production` → set `development` in `.env`, `up -d` again |
 | `https://mult-…synology.me` unreachable on LAN | local DNS (§5 step 4) not done; from mobile data it should work once §5b is set |
-| `https://mult-…synology.me` unreachable away from home | port forward 443 missing (§5b step 1), or ISP CGNAT (no public IPv4) → use a Cloudflare tunnel instead |
+| `https://mult-…synology.me` unreachable away from home | port forward 18443 missing (§5b step 1), or ISP CGNAT (no public IPv4) → use a Cloudflare tunnel instead |
 | `web` shows 502 on `/api` | api unhealthy → `docker compose logs api` |
 | `JWT_SECRET` boot error | `.env` missing/empty (§4) |
 | Empty data after a restore | stale `-wal` replayed → see `docs/DEPLOYMENT.md` §10 |
