@@ -3,6 +3,11 @@
 Synology DS223j (ARM64, 1 GB RAM) — self-hosted, no cloud services, no CI/CD.
 Everything is built on the laptop and copied to the NAS.
 
+- **First time?** Start with `docs/FIRST_DEPLOYMENT.md` (local-network setup with
+  Synology DNS + HTTPS, first boot, first users).
+- **Shipping a new version?** See `docs/UPDATE_DEPLOYMENT.md` (snapshot, rebuild,
+  verify, rollback).
+
 ---
 
 ## 1. Topology (what runs where)
