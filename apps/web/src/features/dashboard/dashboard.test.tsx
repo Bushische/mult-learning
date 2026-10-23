@@ -206,4 +206,52 @@ describe("T11 — dashboard", () => {
     expect(await screen.findByTestId("question")).toBeInTheDocument();
     expect(screen.getByTestId("header-username")).toHaveTextContent("child1");
   });
+
+  it("case 6: an admin gets an Admin entry to /admin; a child does not", async () => {
+    const dashboard = {
+      "GET /stats/heatmap": () => ({ data: { cells: [] } }),
+      "GET /stats/daily": () => ({
+        data: {
+          date: "2026-10-22",
+          totalTries: 0,
+          correctTries: 0,
+          timeEarnedSeconds: 0,
+          timeBankSeconds: 45,
+        },
+      }),
+      "GET /games": () => ({ data: GAMES }),
+    };
+    createApiStub({
+      "GET /me": () => ({
+        data: { id: "u-child", username: "child1", role: "user", timeBankSeconds: 45 },
+      }),
+      ...dashboard,
+    });
+    const childView = renderApp("/");
+    await screen.findByTestId("header-username");
+    expect(screen.queryByTestId("header-admin")).toBeNull();
+    childView.unmount();
+
+    resetSession();
+    useAuthStore.setState({
+      accessToken: "token-admin",
+      user: { id: "u-admin", username: "admin", role: "admin" },
+    });
+    createApiStub({
+      "GET /me": () => ({
+        data: { id: "u-admin", username: "admin", role: "admin", timeBankSeconds: 0 },
+      }),
+      ...dashboard,
+      "GET /admin/users": () => ({ data: [] }),
+      "GET /admin/games": () => ({ data: [] }),
+      "GET /admin/leaderboard": () => ({ data: { today: [], last7Days: [] } }),
+      "GET /admin/stats/daily": () => ({ data: [] }),
+    });
+    const user = userEvent.setup();
+    renderApp("/");
+    await screen.findByTestId("header-admin");
+    await user.click(screen.getByTestId("header-admin"));
+    expect(await screen.findByTestId("admin-tabs")).toBeInTheDocument();
+    expect(screen.getByTestId("header-admin")).toHaveTextContent("Dashboard");
+  });
 });
