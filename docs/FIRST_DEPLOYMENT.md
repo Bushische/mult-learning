@@ -86,9 +86,10 @@ chmod 600 .env
 
 `JWT_SECRET` signs the tokens — changing it later logs everybody out.
 
-## 5. Synology DNS + HTTPS (option A; skip for option B)
+## 5. Synology DNS + HTTPS for the LAN (option A; skip for option B)
 
-Everything happens in DSM — no router changes, no open ports.
+Everything happens in DSM — no router changes, no open ports. (This stays useful
+even with the tunnel below: it gives you warning-free HTTPS on home Wi-Fi.)
 
 1. **DDNS name**: DSM → Control Panel → External Access → DDNS → Add →
    hostname `mult-<you>`, provider `Synology` → you get
@@ -118,11 +119,11 @@ Everything happens in DSM — no router changes, no open ports.
 5. **DSM firewall** (if enabled): allow TCP 18443 from the LAN (and TCP 18081 too
    if you use the plain-HTTP option B URL directly). Full walkthrough: §5c.
 
-## 5c. DSM 7 firewall — detailed setup (recommended once port 18443 is public)
+## 5c. DSM 7 firewall — detailed setup (optional hardening)
 
-With a port forwarded to the internet, run the firewall: it costs nothing and
-Auto Block alone won't stop port scans. DSM's firewall is default-deny — a rule
-list with no "allow" blocks everything — so **create the allow rules first, then
+With the tunnel there are no inbound ports to protect, so the firewall is
+optional — but it costs nothing. DSM's firewall is default-deny — a rule list
+with no "allow" blocks everything — so **create the allow rules first, then
 switch it on**. Do this from a computer on the home LAN (not over the DDNS name).
 
 1. DSM → Control Panel → Security → **Firewall** tab → select the default
@@ -131,57 +132,79 @@ switch it on**. Do this from a computer on the home LAN (not over the DDNS name)
    Create → Ports: **All** → Source IP: **Specific IP** → Subnet:
    `192.168.1.0`, subnet mask `255.255.255.0` (adjust to your LAN — check the
    router if unsure) → Action: **Allow**. Move it to the **top** of the list.
-3. **Rule 2 — the app from anywhere**: Create → Ports: **Custom** → check
-   Destination port, protocol **TCP**, ports `18443` → Source IP: **All** →
-   Action: **Allow**. (Tighter variant: Source IP → **Location** → your country
-   only. Needs no extra setup, but test it from mobile data before relying on it.)
-4. Leave everything else denied (the implicit last rule). No rules for DSM ports
+2. **Rule 2 — the app from anywhere**: only needed for the old port-forward
+   setup — with the §5b tunnel there are no public ports, skip it. (If you ever
+   go back to port forwarding: Create → Ports: **Custom** → Destination port,
+   protocol **TCP**, ports `18443` → Source IP: **All** → Action: **Allow**.)
+3. Leave everything else denied (the implicit last rule). No rules for DSM ports
    (5000/5001), SSH (22), or 18081 from the internet — those stay LAN-only via Rule 1.
-5. Back on the Firewall tab → check **Enable firewall** → Apply.
-6. Verify immediately, in this order:
+4. Back on the Firewall tab → check **Enable firewall** → Apply.
+5. Verify immediately, in this order:
    - LAN still works: open DSM (`http://<nas-ip>:5000`) and the app
-     (`http://<nas-ip>:18081`) from a home device.
+     (`http://<nas-ip>:18081` or the §5 HTTPS name) from a home device.
    - Internet works: on mobile data (Wi-Fi off) open
-     `https://mult-<you>.synology.me:18443/api/health` → `{"status":"ok"}`.
+     `https://mult.<your-domain>/api/health` → `{"status":"ok"}`.
    - If anything fails: DSM → Log Center → Logs → filter "Firewall" shows exactly
      which rule dropped the packet — fix the rule, don't switch the firewall off.
-7. Keep enabled permanently. Re-check after every DSM major update (rarely, custom
+6. Keep enabled permanently. Re-check after every DSM major update (rarely, custom
    rules survive, but verify).
 
-## 5b. Remote access (away from home)
+## 5b. Remote access via Cloudflare tunnel (away from home)
 
-Same Synology DNS name, one router change:
+No port forwarding, no DDNS quirks: `cloudflared` dials out from the NAS and
+Cloudflare serves your public hostname (same pattern as the grocery-list app).
+The Synology reverse proxy from §5 stays for warning-free LAN access; the tunnel
+is purely for the outside.
 
-1. **Port forwarding** on the router: external TCP **18443** → `<nas-lan-ip>:18443`.
-   No other ports (never expose DSM's 5000/5001 or SSH directly).
-2. **Lock down DSM**: Control Panel → Security → enable **Auto Block** (e.g. 5
-   failed logins), turn on **2-factor authentication** for your DSM admin user,
-   keep DSM + Container Manager updated.
-3. **DSM firewall**: set it up per §5c (allow LAN + TCP 18443, deny the rest)
-   instead of leaving it disabled — the forwarded port is visible to the whole
-   internet.
-4. Test on **mobile data** (Wi-Fi off): `https://mult-<you>.synology.me:18443/api/health`
+1. **Cloudflare account** (free): https://dash.cloudflare.com/sign-up.
+2. **A domain on Cloudflare's free plan** (pick one):
+   - **US.KG** — free `yourname.us.kg`, instant, works with Cloudflare.
+   - **eu.org** — free `yourname.eu.org`, approval can take days/weeks.
+   - **Cheapest real domain** (~$1–2/yr, e.g. `.xyz` on Cloudflare Registrar) —
+     the zero-friction option.
+   Add the domain in dash.cloudflare.com (plan **Free**), change its nameservers
+   to Cloudflare's, wait for the "Active" email.
+3. **Create the tunnel** (get the token): Cloudflare dashboard → **Zero Trust**
+   (left sidebar) → **Networks → Tunnels** → **Create a tunnel** → connector type
+   **Cloudflared** → name it `mult-learning`. Copy the install **token**
+   (the long `eyJ…` string). On the tunnel's **Public Hostname** tab → Add:
+   subdomain `mult`, domain your domain from step 2, service **HTTP** →
+   `web:80`. (This creates the DNS for `mult.<your-domain>` automatically.)
+4. **NAS secrets** — add to `~/mult-learning/.env` on the NAS:
+   ```bash
+   TUNNEL_TOKEN=<eyJ… token from step 3>
+   CORS_ORIGIN=https://mult.<your-domain>
+   ```
+5. **Deploy with the tunnel**:
+   ```bash
+   # laptop:
+   scripts/deploy.sh --nas <your-ssh-user>@<nas-ip> --tunnel
+   ```
+   On the NAS: `docker compose -f docker-compose.prod.yml --profile tunnel ps` →
+   api + web + tunnel all healthy. (`restart: unless-stopped` covers NAS reboots;
+   the tunnel restart-loops until the token is valid — a wrong token shows there.)
+6. Test on **mobile data** (Wi-Fi off): `https://mult.<your-domain>/api/health`
    → `{"status":"ok"}`, then log in and play a round.
 
-> Alternative without port forwarding: a Cloudflare tunnel (the grocery-list
-> setup). It needs a domain on Cloudflare's free plan because `synology.me`
-> cannot hold the tunnel's CNAME record. Prefer the port-forward above unless
-> your ISP uses CGNAT (no public IPv4) — then the tunnel is the way.
+> Dropped alternative: port-forwarding TCP (used before the DDNS issues). The
+> tunnel replaces it entirely — no router changes, and it also works behind ISP
+> CGNAT (no public IPv4), where port forwarding never can.
 
 ## 6. Deploy
 
 ```bash
-# laptop:
-scripts/deploy.sh --nas <your-ssh-user>@<nas-ip>
+# laptop (add --tunnel for remote access via §5b; omit for LAN-only):
+scripts/deploy.sh --nas <your-ssh-user>@<nas-ip> --tunnel
 ```
 
 What it does: pipes both images straight through SSH (`docker save | ssh docker load`,
-no `scp` — DSM 7 rejects it) and runs `up -d` in `~/mult-learning`. Then on the NAS:
+no `scp` — DSM 7 rejects it) and runs `up -d` in `~/mult-learning` (with
+`--profile tunnel` when `--tunnel` is passed). Then on the NAS:
 
 ```bash
 cd ~/mult-learning
-/usr/local/bin/docker compose -f docker-compose.prod.yml ps
-# api + web both healthy (web waits for api)
+/usr/local/bin/docker compose -f docker-compose.prod.yml --profile tunnel ps
+# api + web + tunnel all healthy (web waits for api)
 ```
 
 ## 7. First boot + first users
@@ -205,7 +228,8 @@ cd ~/mult-learning
 - [ ] reload keeps the session (no re-login — proves the cookie setup)
 - [ ] install the PWA: iOS Safari → Share → Add to Home Screen; Android Chrome → Install
 - [ ] reboot the NAS once → stack comes back on its own (`restart: unless-stopped`)
-- [ ] away from home (mobile data, Wi-Fi off): open the URL, log in, play a round
+- [ ] away from home (mobile data, Wi-Fi off): open `https://mult.<your-domain>`,
+  log in, play a round
 
 ## 9. Backups
 
@@ -220,8 +244,10 @@ only thing you can't rebuild.
 | `docker: command not found` over SSH | use `/usr/local/bin/docker` (PATH quirk, §3) |
 | `permission denied … /var/run/docker.sock` | user not in `docker` group → §3, then re-login |
 | Login works, session lost on reload (plain HTTP) | `NODE_ENV` is `production` → set `development` in `.env`, `up -d` again |
-| `https://mult-…synology.me` unreachable on LAN | local DNS (§5 step 4) not done; from mobile data it should work once §5b is set |
-| `https://mult-…synology.me` unreachable away from home | port forward 18443 missing (§5b step 1), or ISP CGNAT (no public IPv4) → use a Cloudflare tunnel instead |
+| `https://mult-…synology.me:18443` unreachable on LAN | local DNS (§5 step 4) not done (remote tunnel access is unaffected) |
+| `https://mult.<your-domain>` unreachable anywhere | tunnel misconfigured: `tunnel` container restart-looping → wrong/expired `TUNNEL_TOKEN`; check `docker compose logs tunnel` |
+| Tunnel URL shows Cloudflare error 1033/530 | public hostname points at the wrong service — must be HTTP `web:80` |
+| `CORS_ORIGIN` boot error / API rejects browser origin | `CORS_ORIGIN` must be exactly `https://mult.<your-domain>` |
 | `web` shows 502 on `/api` | api unhealthy → `docker compose logs api` |
 | `JWT_SECRET` boot error | `.env` missing/empty (§4) |
 | Empty data after a restore | stale `-wal` replayed → see `docs/DEPLOYMENT.md` §10 |

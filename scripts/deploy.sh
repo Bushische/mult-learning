@@ -10,14 +10,17 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+#   scripts/deploy.sh --nas <host> [--tunnel]  # save images, copy to NAS, load, up
 COMPOSE_FILE="docker-compose.prod.yml"
 NAS_HOST=""
+TUNNEL_PROFILE=""
 DO_SEED=0
 DO_SMOKE=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --nas) NAS_HOST="$2"; shift 2 ;;
+    --tunnel) TUNNEL_PROFILE="--profile tunnel"; shift ;;
     --seed) DO_SEED=1; shift ;;
     --smoke) DO_SMOKE=1; shift ;;
     *) echo "unknown option: $1" >&2; exit 1 ;;
@@ -33,7 +36,8 @@ if [ -n "$NAS_HOST" ]; then
   docker save mult-learning-api:latest mult-learning-web:latest | gzip | ssh "$NAS_HOST" "gunzip | /usr/local/bin/docker load"
 
   echo "==> starting the stack on $NAS_HOST"
-  ssh "$NAS_HOST" "cd ~/mult-learning && /usr/local/bin/docker compose -f $COMPOSE_FILE up -d"
+  # shellcheck disable=SC2086
+  ssh "$NAS_HOST" "cd ~/mult-learning && /usr/local/bin/docker compose -f $COMPOSE_FILE $TUNNEL_PROFILE up -d"
   exit 0
 fi
 

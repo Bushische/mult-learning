@@ -39,11 +39,13 @@ Full drill (including restore): `docs/DEPLOYMENT.md` §10.
 
 ```bash
 scripts/build-images.sh                 # linux/arm64 rebuild
-scripts/deploy.sh --nas <nas-user>@<nas-ip>   # save | ssh load → up -d
+scripts/deploy.sh --nas <nas-user>@<nas-ip> --tunnel   # save | ssh load → up -d (with tunnel)
 ```
 
 Compose recreates the containers because the images changed; the `data` volume
 (and the database) is untouched. New migrations apply automatically at api boot.
+Pass `--tunnel` only if remote access runs through the §5b tunnel (omit for a
+LAN-only stack) — the flag just adds `--profile tunnel` to the remote `up -d`.
 
 If you changed `docker-compose.prod.yml` itself, copy it over first:
 
@@ -78,7 +80,7 @@ git log --oneline -5                    # pick the last good sha
 git stash -u                            # only if the tree is dirty
 git checkout <last-good-sha>
 scripts/build-images.sh
-scripts/deploy.sh --nas <nas-user>@<nas-ip>
+scripts/deploy.sh --nas <nas-user>@<nas-ip> --tunnel
 git checkout main
 ```
 

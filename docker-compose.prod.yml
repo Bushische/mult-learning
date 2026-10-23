@@ -39,5 +39,21 @@ services:
       api:
         condition: service_healthy
 
+  # Remote access without port forwarding (T33): cloudflared serves the public
+  # hostname from the Cloudflare tunnel dashboard → web:80 (token mode).
+  # Start with: docker compose -f docker-compose.prod.yml --profile tunnel up -d
+  # Requires TUNNEL_TOKEN in .env (Zero Trust → Networks → Tunnels → token).
+  tunnel:
+    profiles: ["tunnel"]
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:-}
+    depends_on:
+      web:
+        condition: service_started
+    mem_limit: 64m
+
 volumes:
   data:
