@@ -39,7 +39,7 @@ Full drill (including restore): `docs/DEPLOYMENT.md` §10.
 
 ```bash
 scripts/build-images.sh                 # linux/arm64 rebuild
-scripts/deploy.sh --nas <nas-user>@<nas-ip>   # save → scp → load → up -d
+scripts/deploy.sh --nas <nas-user>@<nas-ip>   # save | ssh load → up -d
 ```
 
 Compose recreates the containers because the images changed; the `data` volume

@@ -175,8 +175,8 @@ Same Synology DNS name, one router change:
 scripts/deploy.sh --nas <your-ssh-user>@<nas-ip>
 ```
 
-What it does: `docker save` both images → `scp` → `docker load` on the NAS →
-`up -d` in `~/mult-learning`. Then on the NAS:
+What it does: pipes both images straight through SSH (`docker save | ssh docker load`,
+no `scp` — DSM 7 rejects it) and runs `up -d` in `~/mult-learning`. Then on the NAS:
 
 ```bash
 cd ~/mult-learning

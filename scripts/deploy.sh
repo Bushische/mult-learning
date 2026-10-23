@@ -25,18 +25,15 @@ while [ $# -gt 0 ]; do
 done
 
 if [ -n "$NAS_HOST" ]; then
-  echo "==> saving the images"
-  docker save mult-learning-api:latest mult-learning-web:latest | gzip > mult-learning-images.tar.gz
-
-  echo "==> copying to $NAS_HOST"
-  scp mult-learning-images.tar.gz "$NAS_HOST":/tmp/mult-learning-images.tar.gz
-
-  echo "==> loading the images on $NAS_HOST"
-  ssh "$NAS_HOST" "docker load -i /tmp/mult-learning-images.tar.gz && rm -f /tmp/mult-learning-images.tar.gz"
+  # No scp: DSM 7's sshd rejects the sftp subsystem for non-admin users, so the
+  # images are piped straight through SSH (same approach as the grocery project).
+  # /usr/local/bin/docker is the full path — docker is not on the PATH of
+  # non-interactive SSH sessions on DSM.
+  echo "==> transferring the images to $NAS_HOST (docker save | ssh docker load)"
+  docker save mult-learning-api:latest mult-learning-web:latest | gzip | ssh "$NAS_HOST" "gunzip | /usr/local/bin/docker load"
 
   echo "==> starting the stack on $NAS_HOST"
-  ssh "$NAS_HOST" "cd ~/mult-learning && docker compose -f $COMPOSE_FILE up -d"
-  rm -f mult-learning-images.tar.gz
+  ssh "$NAS_HOST" "cd ~/mult-learning && /usr/local/bin/docker compose -f $COMPOSE_FILE up -d"
   exit 0
 fi
 
