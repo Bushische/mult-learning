@@ -340,9 +340,13 @@ describe("T30 — child home redesign", () => {
     renderApp("/");
 
     expect(await screen.findByTestId("game-g-easy")).toHaveTextContent("Easy Twos");
-    expect(screen.getByTestId("game-today-g-easy")).toHaveTextContent("+0:10");
-    expect(screen.getByTestId("game-today-g-easy")).toHaveTextContent("1/2");
-    expect(screen.getByTestId("game-today-g-mixed")).toHaveTextContent("1/1");
+    expect(screen.getByTestId("game-correct-g-easy")).toHaveTextContent("Correct");
+    expect(screen.getByTestId("game-correct-g-easy")).toHaveTextContent("+0:10");
+    expect(screen.getByTestId("game-wrong-g-easy")).toHaveTextContent("Wrong");
+    expect(screen.getByTestId("game-wrong-g-easy")).toHaveTextContent("−0:05");
+    expect(screen.getByTestId("game-total-g-easy")).toHaveTextContent("Today: +0:10 (1/2)");
+    expect(screen.getByTestId("game-total-g-mixed")).toHaveTextContent("Today: +0:10 (1/1)");
+    expect(screen.getByTestId("game-wrong-g-mixed")).toHaveTextContent("−0:00");
   });
 
   it("case 3: the history lists active days with date, gain and correct/attempts", async () => {
@@ -475,5 +479,107 @@ describe("T35 — dashboard header shows today's gain", () => {
 
     expect(await screen.findByTestId("header-bank")).toBeInTheDocument();
     expect(screen.queryByTestId("header-today")).toBeNull();
+  });
+});
+
+describe("T36 — per-game cards show correct / wrong / today total", () => {
+  const isoDate = (ago: number): string =>
+    new Date(Date.now() - ago * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const state = { tries: 3, correct: 2, earned: 20 };
+
+  function t36Stub() {
+    return createApiStub({
+      "GET /me": () => ({
+        data: { id: "u-child", username: "child1", role: "user", timeBankSeconds: 45 },
+      }),
+      "GET /stats/heatmap": () => ({ data: { cells: [] } }),
+      "GET /stats/daily": () => ({
+        data: {
+          date: "2026-10-22",
+          totalTries: 3,
+          correctTries: 2,
+          timeEarnedSeconds: 20,
+          timeBankSeconds: 45,
+        },
+      }),
+      "GET /games": () => ({ data: GAMES }),
+      "GET /stats/per-game": () => ({
+        data: {
+          user: { id: "u-child", username: "child1", timeBankSeconds: 45 },
+          days: [
+            ...[6, 5, 4, 3, 2, 1].map((ago) => ({
+              date: isoDate(ago),
+              totals: { totalTries: 0, correctTries: 0, timeEarnedSeconds: 0 },
+              games: [],
+            })),
+            {
+              date: isoDate(0),
+              totals: {
+                totalTries: state.tries,
+                correctTries: state.correct,
+                timeEarnedSeconds: state.earned,
+              },
+              games: [
+                {
+                  gameId: "g-easy",
+                  totalTries: state.tries,
+                  correctTries: state.correct,
+                  timeEarnedSeconds: state.earned,
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    });
+  }
+
+  it("case 1: green Correct, red Wrong and the today total", async () => {
+    t36Stub();
+    renderApp("/");
+
+    expect(await screen.findByTestId("game-correct-g-easy")).toHaveTextContent("Correct");
+    expect(screen.getByTestId("game-correct-g-easy")).toHaveTextContent("+0:20");
+    expect(screen.getByTestId("game-wrong-g-easy")).toHaveTextContent("Wrong");
+    expect(screen.getByTestId("game-wrong-g-easy")).toHaveTextContent("−0:05");
+    expect(screen.getByTestId("game-total-g-easy")).toHaveTextContent("Today: +0:20 (2/3)");
+  });
+
+  it("cases 2-3: zero wrong and unplayed games show zeros", async () => {
+    t36Stub();
+    renderApp("/");
+
+    await screen.findByTestId("game-g-mixed");
+    expect(screen.getByTestId("game-wrong-g-mixed")).toHaveTextContent("−0:00");
+    expect(screen.getByTestId("game-total-g-mixed")).toHaveTextContent("Today: +0:00 (0/0)");
+  });
+
+  it("case 4: the rows refresh with the 15-second poll", async () => {
+    state.tries = 3;
+    state.correct = 2;
+    state.earned = 20;
+    t36Stub();
+    renderApp("/");
+
+    vi.useFakeTimers();
+    try {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(screen.getByTestId("game-total-g-easy")).toHaveTextContent("(2/3)");
+
+      state.tries = 4;
+      state.correct = 3;
+      state.earned = 30;
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(16_000);
+      });
+    } finally {
+      vi.useRealTimers();
+      state.tries = 3;
+      state.correct = 2;
+      state.earned = 20;
+    }
+    expect(screen.getByTestId("game-total-g-easy")).toHaveTextContent("Today: +0:30 (3/4)");
   });
 });
