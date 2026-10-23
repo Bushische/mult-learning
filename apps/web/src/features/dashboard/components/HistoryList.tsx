@@ -14,8 +14,16 @@ interface HistoryListProps {
  */
 export function HistoryList({ days, games }: HistoryListProps) {
   const gamesById = new Map(games.map((game) => [game.id, game]));
-  const rows = days
-    .map((day) => ({ day, summary: summarizeDay(day, gamesById, day.totals) }))
+  const rows = [...days]
+    .reverse()
+    .map((day) => ({
+      day,
+      summary: summarizeDay(day, gamesById, {
+        earnedSeconds: day.totals.timeEarnedSeconds,
+        correctTries: day.totals.correctTries,
+        totalTries: day.totals.totalTries,
+      }),
+    }))
     .filter(({ summary }) => summary.totalTries > 0);
   if (rows.length === 0) {
     return null;

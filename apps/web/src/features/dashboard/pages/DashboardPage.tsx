@@ -1,4 +1,3 @@
-import type { Game } from "@mult/shared";
 import { AppHeader } from "../components/AppHeader";
 import { DailyStatsCard } from "../components/DailyStatsCard";
 import { GameList } from "../components/GameList";
