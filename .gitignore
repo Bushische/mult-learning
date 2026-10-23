@@ -9,3 +9,4 @@ local-data/
 *.log
 .DS_Store
 .pnpm-store/
+mult-learning-images.tar.gz
