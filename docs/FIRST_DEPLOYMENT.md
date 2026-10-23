@@ -9,7 +9,7 @@ Two ways to open the app from the home network — pick one:
 
 | | A — HTTPS via Synology DNS (recommended) | B — plain HTTP (simplest) |
 |---|---|---|
-| URL | `https://mult.<you>.synology.me` | `http://<nas-ip>:8080` |
+| URL | `https://mult.<you>.synology.me` | `http://<nas-ip>:18081` |
 | Setup | DDNS + free certificate + reverse proxy (§5) | none |
 | `NODE_ENV` | `production` | `development` (see box below) |
 | Login persistence | full (Secure cookie works over HTTPS) | full |
@@ -73,7 +73,7 @@ scp docker-compose.prod.yml <your-ssh-user>@<nas-ip>:~/mult-learning/docker-comp
 cd ~/mult-learning
 cat > .env << 'EOF'
 NODE_ENV=production     # or development for option B (plain HTTP)
-WEB_PORT=8080
+WEB_PORT=18081          # host port for the web container (default 8080 — we use 18081)
 LOG_LEVEL=info
 JWT_SECRET=<paste: openssl rand -hex 32>
 DATABASE_PATH=/data/app.db
@@ -99,7 +99,8 @@ Everything happens in DSM — no router changes, no open ports.
    Reverse Proxy → Create → Customise:
    - Source: protocol **HTTPS**, hostname `mult-<you>.synology.me`, port **443**,
      enable HSTS, assign the step-2 certificate.
-   - Destination: protocol **HTTP**, hostname `localhost`, port **8080**.
+   - Destination: protocol **HTTP**, hostname `localhost`, port **18081**
+     (must match `WEB_PORT` in `~/mult-learning/.env`).
 4. **Make the name resolve inside your LAN.** `synology.me` points at your public
    IP, which LAN devices can't always reach (no hairpin NAT on many routers).
    Pick one:
@@ -111,7 +112,8 @@ Everything happens in DSM — no router changes, no open ports.
    - Test from a laptop first: `https://mult-<you>.synology.me/api/health` must
      return `{"status":"ok"}` — on Wi-Fi **and** with no router tricks it fails,
      which tells you step 4 isn't done yet.
-5. **DSM firewall** (if enabled): allow TCP 443 from the LAN.
+5. **DSM firewall** (if enabled): allow TCP 443 from the LAN (and TCP 18081 too
+   if you use the plain-HTTP option B URL directly).
 
 ## 5b. Remote access (away from home)
 

@@ -23,7 +23,8 @@ Everything is built on the laptop and copied to the NAS.
 * `web` — nginx: static PWA (`index.html`, service worker) + reverse proxy `/api → api:3000`.
 * `api` — Fastify + Drizzle + better-sqlite3. **No database server** — SQLite runs inside
   the api process (WAL mode), the file lives on the `data` volume.
-* The browser only ever talks to the `web` container (port `8080` by default), so the
+* The browser only ever talks to the `web` container (host port `WEB_PORT`,
+  18081 in our setup), so the
   refresh cookie stays first-party (`SameSite=Strict`, `Path=/api/auth`).
 
 ## 2. Prerequisites
@@ -69,7 +70,7 @@ Create `/volume1/docker/mult-learning/.env` on the NAS (keep it out of git):
 
 ```bash
 NODE_ENV=production
-WEB_PORT=8080
+WEB_PORT=18081
 LOG_LEVEL=info
 JWT_SECRET=<openssl rand -hex 32>
 DATABASE_PATH=/data/app.db
@@ -93,7 +94,7 @@ The volume is created automatically (`data` → `/data` in the api container).
 
 ## 7. Public HTTPS exposure
 
-* Port mapping: `WEB_PORT` (default `8080) → 8080` on the NAS.
+* Port mapping: `WEB_PORT` (18081 in our setup, `8080` if unset) → the web container's port 80.
 * For HTTPS, put the NAS behind a reverse proxy (nginx on the NAS, Synology Reverse
   Proxy, or a Cloudflare tunnel) and forward `/` + `/api` to the web container.
 * The refresh cookie is `Secure` **only** when `NODE_ENV=production` — behind plain HTTP
@@ -170,7 +171,7 @@ $COMPOSE run --rm --entrypoint sh api -c "cp /data/restore-test.db /data/app.db"
 # 5. start again and verify the data
 $COMPOSE start api
 $COMPOSE exec -T api sqlite3 /data/app.db "select username, role from users;"
-WEB_PORT=8080 scripts/smoke.sh        # login + answer + stats
+WEB_PORT=18081 scripts/smoke.sh        # login + answer + stats
 ```
 
 Verified on the laptop (2026-10-22): after the restore the `users` table still contained
