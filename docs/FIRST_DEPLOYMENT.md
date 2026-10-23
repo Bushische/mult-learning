@@ -116,7 +116,37 @@ Everything happens in DSM — no router changes, no open ports.
      return `{"status":"ok"}` — on Wi-Fi **and** with no router tricks it fails,
      which tells you step 4 isn't done yet.
 5. **DSM firewall** (if enabled): allow TCP 18443 from the LAN (and TCP 18081 too
-   if you use the plain-HTTP option B URL directly).
+   if you use the plain-HTTP option B URL directly). Full walkthrough: §5c.
+
+## 5c. DSM 7 firewall — detailed setup (recommended once port 18443 is public)
+
+With a port forwarded to the internet, run the firewall: it costs nothing and
+Auto Block alone won't stop port scans. DSM's firewall is default-deny — a rule
+list with no "allow" blocks everything — so **create the allow rules first, then
+switch it on**. Do this from a computer on the home LAN (not over the DDNS name).
+
+1. DSM → Control Panel → Security → **Firewall** tab → select the default
+   profile → **Edit Rules**.
+2. **Rule 1 — keep the LAN working** (this is what prevents locking yourself out):
+   Create → Ports: **All** → Source IP: **Specific IP** → Subnet:
+   `192.168.1.0`, subnet mask `255.255.255.0` (adjust to your LAN — check the
+   router if unsure) → Action: **Allow**. Move it to the **top** of the list.
+3. **Rule 2 — the app from anywhere**: Create → Ports: **Custom** → check
+   Destination port, protocol **TCP**, ports `18443` → Source IP: **All** →
+   Action: **Allow**. (Tighter variant: Source IP → **Location** → your country
+   only. Needs no extra setup, but test it from mobile data before relying on it.)
+4. Leave everything else denied (the implicit last rule). No rules for DSM ports
+   (5000/5001), SSH (22), or 18081 from the internet — those stay LAN-only via Rule 1.
+5. Back on the Firewall tab → check **Enable firewall** → Apply.
+6. Verify immediately, in this order:
+   - LAN still works: open DSM (`http://<nas-ip>:5000`) and the app
+     (`http://<nas-ip>:18081`) from a home device.
+   - Internet works: on mobile data (Wi-Fi off) open
+     `https://mult-<you>.synology.me:18443/api/health` → `{"status":"ok"}`.
+   - If anything fails: DSM → Log Center → Logs → filter "Firewall" shows exactly
+     which rule dropped the packet — fix the rule, don't switch the firewall off.
+7. Keep enabled permanently. Re-check after every DSM major update (rarely, custom
+   rules survive, but verify).
 
 ## 5b. Remote access (away from home)
 
@@ -127,8 +157,9 @@ Same Synology DNS name, one router change:
 2. **Lock down DSM**: Control Panel → Security → enable **Auto Block** (e.g. 5
    failed logins), turn on **2-factor authentication** for your DSM admin user,
    keep DSM + Container Manager updated.
-3. **DSM firewall** (if enabled): allow TCP 18443 from all (the reverse proxy only
-   serves the app hostname; DSM itself stays behind its own login).
+3. **DSM firewall**: set it up per §5c (allow LAN + TCP 18443, deny the rest)
+   instead of leaving it disabled — the forwarded port is visible to the whole
+   internet.
 4. Test on **mobile data** (Wi-Fi off): `https://mult-<you>.synology.me:18443/api/health`
    → `{"status":"ok"}`, then log in and play a round.
 
