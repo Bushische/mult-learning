@@ -64,8 +64,10 @@ DSM → Control Panel → Users → your user → Edit → check "administrators
 but it does **not** copy the compose file or secrets — do that once now:
 
 ```bash
-# laptop:
-scp docker-compose.prod.yml <your-ssh-user>@<nas-ip>:~/mult-learning/docker-compose.prod.yml
+# laptop (scp -O = legacy protocol: DSM 7's sftp subsystem rejects non-admin
+# users, same workaround as the grocery-list project; scp won't create dirs):
+ssh <your-ssh-user>@<nas-ip> 'mkdir -p ~/mult-learning'
+scp -O docker-compose.prod.yml <your-ssh-user>@<nas-ip>:~/mult-learning/docker-compose.prod.yml
 ```
 
 ```bash
