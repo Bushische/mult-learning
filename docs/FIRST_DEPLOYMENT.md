@@ -1,9 +1,9 @@
-# First Deployment — Synology DS223j, local network only
+# First Deployment — Synology DS223j, home + away
 
-Goal: the app runs on your NAS and is reachable from phones/tablets on home
-Wi-Fi only. **No port forwarding, no tunnel, no public domain.** Companion to
-`docs/DEPLOYMENT.md` (topology, backups, restore drill) and
-`docs/UPDATE_DEPLOYMENT.md` (publishing new versions later).
+Goal: the app runs on your NAS and is reachable from phones/tablets both on home
+Wi-Fi and away from home, through your Synology DNS name. **No tunnel, no public
+domain purchase.** Companion to `docs/DEPLOYMENT.md` (topology, backups, restore
+drill) and `docs/UPDATE_DEPLOYMENT.md` (publishing new versions later).
 
 Two ways to open the app from the home network — pick one:
 
@@ -113,6 +113,25 @@ Everything happens in DSM — no router changes, no open ports.
      which tells you step 4 isn't done yet.
 5. **DSM firewall** (if enabled): allow TCP 443 from the LAN.
 
+## 5b. Remote access (away from home)
+
+Same Synology DNS name, one router change:
+
+1. **Port forwarding** on the router: external TCP **443** → `<nas-lan-ip>:443`.
+   No other ports (never expose DSM's 5000/5001 or SSH directly).
+2. **Lock down DSM**: Control Panel → Security → enable **Auto Block** (e.g. 5
+   failed logins), turn on **2-factor authentication** for your DSM admin user,
+   keep DSM + Container Manager updated.
+3. **DSM firewall** (if enabled): allow TCP 443 from all (the reverse proxy only
+   serves the app hostname; DSM itself stays behind its own login).
+4. Test on **mobile data** (Wi-Fi off): `https://mult-<you>.synology.me/api/health`
+   → `{"status":"ok"}`, then log in and play a round.
+
+> Alternative without port forwarding: a Cloudflare tunnel (the grocery-list
+> setup). It needs a domain on Cloudflare's free plan because `synology.me`
+> cannot hold the tunnel's CNAME record. Prefer the port-forward above unless
+> your ISP uses CGNAT (no public IPv4) — then the tunnel is the way.
+
 ## 6. Deploy
 
 ```bash
@@ -150,6 +169,7 @@ cd ~/mult-learning
 - [ ] reload keeps the session (no re-login — proves the cookie setup)
 - [ ] install the PWA: iOS Safari → Share → Add to Home Screen; Android Chrome → Install
 - [ ] reboot the NAS once → stack comes back on its own (`restart: unless-stopped`)
+- [ ] away from home (mobile data, Wi-Fi off): open the URL, log in, play a round
 
 ## 9. Backups
 
@@ -164,7 +184,8 @@ only thing you can't rebuild.
 | `docker: command not found` over SSH | use `/usr/local/bin/docker` (PATH quirk, §3) |
 | `permission denied … /var/run/docker.sock` | user not in `docker` group → §3, then re-login |
 | Login works, session lost on reload (plain HTTP) | `NODE_ENV` is `production` → set `development` in `.env`, `up -d` again |
-| `https://mult-…synology.me` unreachable on LAN | local DNS (§5 step 4) not done; test from mobile data is NOT expected to work (local-only design) |
+| `https://mult-…synology.me` unreachable on LAN | local DNS (§5 step 4) not done; from mobile data it should work once §5b is set |
+| `https://mult-…synology.me` unreachable away from home | port forward 443 missing (§5b step 1), or ISP CGNAT (no public IPv4) → use a Cloudflare tunnel instead |
 | `web` shows 502 on `/api` | api unhealthy → `docker compose logs api` |
 | `JWT_SECRET` boot error | `.env` missing/empty (§4) |
 | Empty data after a restore | stale `-wal` replayed → see `docs/DEPLOYMENT.md` §10 |

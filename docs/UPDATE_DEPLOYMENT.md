@@ -1,7 +1,7 @@
 # Update Deployment — publish a fresh version to the NAS
 
-Scope: the app is already live per `docs/FIRST_DEPLOYMENT.md`. This publishes a
-new build from the laptop. Local-network only — no tunnel, no DNS changes.
+Scope: the app is already live per `docs/FIRST_DEPLOYMENT.md` (home + away over
+Synology DNS). This publishes a new build from the laptop — no tunnel, no DNS changes.
 
 ---
 
