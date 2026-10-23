@@ -174,21 +174,29 @@ function installServer(): { state: ServerState; stub: ApiStub } {
         correctTries,
         timeEarnedSeconds,
       });
+      const t = (totalTries: number, correctTries: number, timeEarnedSeconds: number) => ({
+        totalTries,
+        correctTries,
+        timeEarnedSeconds,
+      });
       return {
         data: {
           user: { id: "u-child1", username: "child1", timeBankSeconds: 45 },
           days: [
-            { date: iso(6), games: [] },
-            { date: iso(5), games: [] },
-            { date: iso(4), games: [] },
-            { date: iso(3), games: [g("g-easy", 4, 3, 30)] },
-            { date: iso(2), games: [] },
+            { date: iso(6), totals: t(0, 0, 0), games: [] },
+            { date: iso(5), totals: t(0, 0, 0), games: [] },
+            // Legacy day: totals exist, no per-game breakdown (recorded before T28).
+            { date: iso(4), totals: t(5, 4, 40), games: [] },
+            { date: iso(3), totals: t(4, 3, 30), games: [g("g-easy", 4, 3, 30)] },
+            { date: iso(2), totals: t(0, 0, 0), games: [] },
             {
               date: iso(1),
+              totals: t(3, 2, 20),
               games: [g("g-easy", 2, 2, 20), g("g-mixed", 1, 0, 0)],
             },
             {
               date: iso(0),
+              totals: t(3, 2, 20),
               games: [g("g-easy", 2, 1, 10), g("g-mixed", 1, 1, 10)],
             },
           ],
@@ -557,6 +565,7 @@ describe("T28 — readable child stats with per-game results", () => {
     const table = await screen.findByTestId("week-table");
     expect(within(table).getByText("Easy Twos")).toBeInTheDocument();
     expect(within(table).getByText("Mixed Table")).toBeInTheDocument();
+    expect(within(table).getByText("Total")).toBeInTheDocument();
     expect(within(table).getAllByTestId(/^week-row-/)).toHaveLength(7);
 
     const played = screen.getByTestId(`week-cell-${isoDate(3)}-g-easy`);
@@ -564,6 +573,11 @@ describe("T28 — readable child stats with per-game results", () => {
     expect(played).toHaveTextContent("3/4");
     const idle = screen.getByTestId(`week-cell-${isoDate(2)}-g-easy`);
     expect(idle).toHaveTextContent("—");
+    // Legacy day: the Total column shows the day's numbers, game cells stay dashed.
+    const legacyTotal = screen.getByTestId(`week-total-${isoDate(4)}`);
+    expect(legacyTotal).toHaveTextContent("+0:40");
+    expect(legacyTotal).toHaveTextContent("4/5");
+    expect(screen.getByTestId(`week-cell-${isoDate(4)}-g-easy`)).toHaveTextContent("—");
   });
 
   it("case 3: no assigned games shows a message and no table", async () => {

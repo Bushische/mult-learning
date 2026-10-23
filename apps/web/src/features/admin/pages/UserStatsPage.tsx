@@ -52,10 +52,15 @@ export function UserStatsPage() {
   const summary = stats?.last7Days;
   const days = perGame?.days ?? [];
   const todayEntry = days[days.length - 1];
+  const todayTotals = todayEntry?.totals ?? {
+    totalTries: 0,
+    correctTries: 0,
+    timeEarnedSeconds: 0,
+  };
   const todayGames = todayEntry?.games ?? [];
-  const todayEarned = todayGames.reduce((sum, entry) => sum + entry.timeEarnedSeconds, 0);
-  const todayTries = todayGames.reduce((sum, entry) => sum + entry.totalTries, 0);
-  const todayCorrect = todayGames.reduce((sum, entry) => sum + entry.correctTries, 0);
+  const todayEarned = todayTotals.timeEarnedSeconds;
+  const todayTries = todayTotals.totalTries;
+  const todayCorrect = todayTotals.correctTries;
 
   return (
     <div className="min-h-screen">
@@ -105,6 +110,9 @@ export function UserStatsPage() {
                   <th scope="col" className="py-2">
                     Day
                   </th>
+                  <th scope="col" className="py-2">
+                    Total
+                  </th>
                   {assignedGames.map((game) => (
                     <th key={game.id} scope="col" className="py-2">
                       {game.name}
@@ -116,6 +124,11 @@ export function UserStatsPage() {
                 {days.map((day) => (
                   <tr key={day.date} data-testid={`week-row-${day.date}`}>
                     <td className="py-2 font-semibold">{formatDayLabel(day.date)}</td>
+                    <td className="py-2 font-semibold" data-testid={`week-total-${day.date}`}>
+                      {day.totals.totalTries > 0
+                        ? `+${formatDuration(day.totals.timeEarnedSeconds)} · ${day.totals.correctTries}/${day.totals.totalTries}`
+                        : "—"}
+                    </td>
                     {assignedGames.map((game) => {
                       const entry = day.games.find((row) => row.gameId === game.id);
                       return (

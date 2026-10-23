@@ -123,19 +123,34 @@ export function getPerGameDaily(
     .from(gameDailyStats)
     .where(and(eq(gameDailyStats.userId, userId), gte(gameDailyStats.date, dates[0] as string)))
     .all();
+  // Totals per day come from `daily_stats`, so days recorded before the
+  // per-game breakdown existed (T28) still show their numbers.
+  const dailyRows = db
+    .select()
+    .from(dailyStats)
+    .where(and(eq(dailyStats.userId, userId), gte(dailyStats.date, dates[0] as string)))
+    .all();
   return {
     user: { id: user.id, username: user.username, timeBankSeconds: user.timeBankSeconds },
-    days: dates.map((date) => ({
-      date,
-      games: rows
-        .filter((row) => row.date === date)
-        .map((row) => ({
-          gameId: row.gameId,
-          totalTries: row.totalTries,
-          correctTries: row.correctTries,
-          timeEarnedSeconds: row.timeEarnedSeconds,
-        }))
-        .sort((a, b) => a.gameId.localeCompare(b.gameId)),
-    })),
+    days: dates.map((date) => {
+      const daily = dailyRows.find((row) => row.date === date);
+      return {
+        date,
+        totals: {
+          totalTries: daily?.totalTries ?? 0,
+          correctTries: daily?.correctTries ?? 0,
+          timeEarnedSeconds: daily?.timeEarnedSeconds ?? 0,
+        },
+        games: rows
+          .filter((row) => row.date === date)
+          .map((row) => ({
+            gameId: row.gameId,
+            totalTries: row.totalTries,
+            correctTries: row.correctTries,
+            timeEarnedSeconds: row.timeEarnedSeconds,
+          }))
+          .sort((a, b) => a.gameId.localeCompare(b.gameId)),
+      };
+    }),
   };
 }

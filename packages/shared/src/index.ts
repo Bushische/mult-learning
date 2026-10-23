@@ -332,9 +332,14 @@ export const perGameDayStatSchema = z.object({
 });
 export type PerGameDayStat = z.infer<typeof perGameDayStatSchema>;
 
-/** One day of per-game numbers, newest day last. */
+/** One day of numbers: totals across games plus the per-game breakdown. */
 export const perGameDailyDaySchema = z.object({
   date: dateSchema,
+  totals: z.object({
+    totalTries: z.number().int().min(0),
+    correctTries: z.number().int().min(0),
+    timeEarnedSeconds: secondsSchema,
+  }),
   games: z.array(perGameDayStatSchema),
 });
 export type PerGameDailyDay = z.infer<typeof perGameDailyDaySchema>;

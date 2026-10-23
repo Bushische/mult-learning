@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { gameDailyStats, games, users } from "../../db/schema.js";
+import { dailyStats, gameDailyStats, games, users } from "../../db/schema.js";
 import { type TestApp, createTestApp } from "../../test/helper.js";
 
 let ctx: TestApp;
@@ -72,6 +72,7 @@ describe("T28 — per-day per-game stats", () => {
     expect(body.user).toMatchObject({ id: childId, username: "child1" });
     expect(body.days).toHaveLength(7);
     const today = body.days[body.days.length - 1];
+    expect(today.totals).toEqual({ totalTries: 3, correctTries: 2, timeEarnedSeconds: 20 });
     expect(today.games).toContainEqual({
       gameId: easyId,
       totalTries: 2,
@@ -109,24 +110,57 @@ describe("T28 — per-day per-game stats", () => {
         timeEarnedSeconds: 20,
       })
       .run();
+    // Totals come from daily_stats — including a legacy day with no per-game rows.
+    ctx.db
+      .insert(dailyStats)
+      .values({
+        userId: childId,
+        date: dateAgo(3),
+        totalTries: 4,
+        correctTries: 3,
+        timeEarnedSeconds: 30,
+      })
+      .run();
+    ctx.db
+      .insert(dailyStats)
+      .values({
+        userId: childId,
+        date: dateAgo(4),
+        totalTries: 5,
+        correctTries: 4,
+        timeEarnedSeconds: 40,
+      })
+      .run();
 
     const body = (await perGame(adminToken, childId)).json();
     const byDate = new Map(
-      body.days.map((day: { date: string; games: unknown[] }) => [day.date, day.games]),
+      body.days.map(
+        (day: { date: string; totals: unknown; games: unknown[] }) => [day.date, day] as const,
+      ),
     );
-    expect(byDate.get(dateAgo(3))).toContainEqual({
+    const three = byDate.get(dateAgo(3)) as { totals: unknown; games: unknown[] };
+    expect(three.totals).toEqual({ totalTries: 4, correctTries: 3, timeEarnedSeconds: 30 });
+    expect(three.games).toContainEqual({
       gameId: easyId,
       totalTries: 4,
       correctTries: 3,
       timeEarnedSeconds: 30,
     });
-    expect(byDate.get(dateAgo(1))).toContainEqual({
+    const one = byDate.get(dateAgo(1)) as { totals: unknown; games: unknown[] };
+    expect(one.totals).toEqual({ totalTries: 0, correctTries: 0, timeEarnedSeconds: 0 });
+    expect(one.games).toContainEqual({
       gameId: mixedId,
       totalTries: 2,
       correctTries: 2,
       timeEarnedSeconds: 20,
     });
-    expect(byDate.get(dateAgo(2))).toEqual([]);
+    // Legacy day: totals show, game cells stay empty.
+    const four = byDate.get(dateAgo(4)) as { totals: unknown; games: unknown[] };
+    expect(four.totals).toEqual({ totalTries: 5, correctTries: 4, timeEarnedSeconds: 40 });
+    expect(four.games).toEqual([]);
+    const idle = byDate.get(dateAgo(2)) as { totals: unknown; games: unknown[] };
+    expect(idle.totals).toEqual({ totalTries: 0, correctTries: 0, timeEarnedSeconds: 0 });
+    expect(idle.games).toEqual([]);
   });
 
   it("case 3: a fresh user gets seven empty days", async () => {

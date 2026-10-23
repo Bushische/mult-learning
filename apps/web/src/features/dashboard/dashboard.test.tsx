@@ -269,16 +269,29 @@ describe("T30 — child home redesign", () => {
       correctTries: number,
       timeEarnedSeconds: number,
     ) => ({ gameId, totalTries, correctTries, timeEarnedSeconds });
+    const t = (totalTries: number, correctTries: number, timeEarnedSeconds: number) => ({
+      totalTries,
+      correctTries,
+      timeEarnedSeconds,
+    });
     return {
       user: { id: "u-child", username: "child1", timeBankSeconds: 45 },
       days: [
-        { date: isoDate(6), games: [] },
-        { date: isoDate(5), games: [] },
-        { date: isoDate(4), games: [] },
-        { date: isoDate(3), games: [g("g-easy", 4, 3, 30)] },
-        { date: isoDate(2), games: [] },
-        { date: isoDate(1), games: [g("g-easy", 2, 2, 20), g("g-mixed", 1, 0, 0)] },
-        { date: isoDate(0), games: [g("g-easy", 2, 1, 10), g("g-mixed", 1, 1, 10)] },
+        { date: isoDate(6), totals: t(0, 0, 0), games: [] },
+        { date: isoDate(5), totals: t(0, 0, 0), games: [] },
+        { date: isoDate(4), totals: t(0, 0, 0), games: [] },
+        { date: isoDate(3), totals: t(4, 3, 30), games: [g("g-easy", 4, 3, 30)] },
+        { date: isoDate(2), totals: t(0, 0, 0), games: [] },
+        {
+          date: isoDate(1),
+          totals: t(3, 2, 20),
+          games: [g("g-easy", 2, 2, 20), g("g-mixed", 1, 0, 0)],
+        },
+        {
+          date: isoDate(0),
+          totals: t(3, 2, 20),
+          games: [g("g-easy", 2, 1, 10), g("g-mixed", 1, 1, 10)],
+        },
       ],
     };
   }

@@ -192,6 +192,7 @@ describe("T30 — child per-day per-game stats", () => {
     const body = response.json();
     expect(body.days).toHaveLength(7);
     const today = body.days[body.days.length - 1];
+    expect(today.totals).toEqual({ totalTries: 2, correctTries: 2, timeEarnedSeconds: 20 });
     expect(today.games).toContainEqual({
       gameId: easy?.id,
       totalTries: 1,
