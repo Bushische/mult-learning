@@ -123,7 +123,7 @@ export function UserStatsPage() {
                 </tr>
               </thead>
               <tbody>
-                {days.map((day) => {
+                {[...days].reverse().map((day) => {
                   const summary = summarizeDay(day, gamesById, {
                     earnedSeconds: 0,
                     correctTries: 0,

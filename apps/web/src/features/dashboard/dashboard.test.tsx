@@ -353,7 +353,12 @@ describe("T30 — child home redesign", () => {
     renderApp("/");
 
     const history = await screen.findByTestId("history-list");
-    expect(within(history).getAllByTestId(/^history-day-/)).toHaveLength(3);
+    const rows = within(history).getAllByTestId(/^history-day-/);
+    expect(rows).toHaveLength(3);
+    // newest first: today on top
+    expect(rows[0]?.getAttribute("data-testid")).toBe(`history-day-${isoDate(0)}`);
+    expect(rows[1]?.getAttribute("data-testid")).toBe(`history-day-${isoDate(1)}`);
+    expect(rows[2]?.getAttribute("data-testid")).toBe(`history-day-${isoDate(3)}`);
     const row = screen.getByTestId(`history-day-${isoDate(3)}`);
     expect(row).toHaveTextContent("+0:25");
     expect(row).toHaveTextContent("3/4");

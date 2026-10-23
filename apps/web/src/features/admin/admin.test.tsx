@@ -570,6 +570,10 @@ describe("T28 — readable child stats with per-game results", () => {
     expect(within(table).getByText("Mixed Table")).toBeInTheDocument();
     expect(within(table).getByText("Total")).toBeInTheDocument();
     expect(within(table).getAllByTestId(/^week-row-/)).toHaveLength(7);
+    // newest first: today on top
+    const ordered = within(table).getAllByTestId(/^week-row-/);
+    expect(ordered[0]?.getAttribute("data-testid")).toBe(`week-row-${isoDate(0)}`);
+    expect(ordered[6]?.getAttribute("data-testid")).toBe(`week-row-${isoDate(6)}`);
 
     const played = screen.getByTestId(`week-cell-${isoDate(3)}-g-easy`);
     expect(played).toHaveTextContent("+0:30");
