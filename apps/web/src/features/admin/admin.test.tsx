@@ -494,6 +494,43 @@ describe("T20 — child stats heatmap + week summary", () => {
   });
 });
 
+describe("T29 — jump to child stats from User management", () => {
+  it("case 1: tapping Stats opens the child's stats page", async () => {
+    installServer();
+    const user = userEvent.setup();
+    renderApp("/admin");
+
+    await user.click(await screen.findByRole("button", { name: "Users" }));
+    await user.click(await screen.findByTestId("stats-link-child1"));
+
+    expect(await screen.findByTestId("user-stats-name")).toHaveTextContent("child1");
+  });
+
+  it("case 2: Back to admin returns to the panel", async () => {
+    installServer();
+    const user = userEvent.setup();
+    renderApp("/admin");
+
+    await user.click(await screen.findByRole("button", { name: "Users" }));
+    await user.click(await screen.findByTestId("stats-link-child1"));
+    await user.click(await screen.findByTestId("back-to-admin"));
+
+    expect(await screen.findByTestId("admin-tabs")).toBeInTheDocument();
+  });
+
+  it("case 3: a non-admin opening /admin is redirected out", async () => {
+    installServer();
+    resetSession();
+    useAuthStore.setState({
+      accessToken: "token-child1",
+      user: { id: "u-child1", username: "child1", role: "user" },
+    });
+    renderApp("/admin");
+
+    expect(await screen.findByTestId("user-grid")).toBeInTheDocument();
+  });
+});
+
 describe("T28 — readable child stats with per-game results", () => {
   const isoDate = (ago: number): string =>
     new Date(Date.now() - ago * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);

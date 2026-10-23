@@ -1,5 +1,6 @@
 import type { AdminUser, Game } from "@mult/shared";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { formatBank } from "../../dashboard/lib/format";
 
 interface UserRowProps {
@@ -38,18 +39,27 @@ export function UserRow({ user, games, onSave, onDelete, onAssign, onReset }: Us
             {user.role} · {formatBank(user.timeBankSeconds)} bank
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            setEditing((current) => !current);
-            setUsername(user.username);
-            setRole(user.role);
-            setPin("");
-          }}
-          className="min-h-[44px] rounded-xl border border-slate-300 px-4"
-        >
-          Edit
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            to={`/admin/users/${user.id}/stats`}
+            data-testid={`stats-link-${user.username}`}
+            className="flex min-h-[44px] items-center rounded-xl border border-slate-300 px-4"
+          >
+            Stats
+          </Link>
+          <button
+            type="button"
+            onClick={() => {
+              setEditing((current) => !current);
+              setUsername(user.username);
+              setRole(user.role);
+              setPin("");
+            }}
+            className="min-h-[44px] rounded-xl border border-slate-300 px-4"
+          >
+            Edit
+          </button>
+        </div>
       </div>
 
       {editing ? (
