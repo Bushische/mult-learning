@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import "../../test/setup";
 import type { AdminDailyRow, AdminUser, Game, LeaderboardResponse } from "@mult/shared";
 import { ApiError, api } from "../../lib/api-client";
@@ -47,6 +47,8 @@ interface ServerState {
   daily: AdminDailyRow[];
   /** token → username (the session of a logged-in user) */
   sessions: Record<string, string>;
+  /** added to today's per-game earned seconds (live-refresh test mutates it) */
+  perGameBump: number;
 }
 
 function adminUser(username: string, role: "admin" | "user", bank = 0): StubUser {
@@ -86,6 +88,7 @@ function installServer(): { state: ServerState; stub: ApiStub } {
       },
     ],
     sessions: { "token-admin": "admin" },
+    perGameBump: 0,
   };
 
   const publicUser = (user: StubUser) => ({
@@ -196,8 +199,8 @@ function installServer(): { state: ServerState; stub: ApiStub } {
             },
             {
               date: iso(0),
-              totals: t(3, 2, 20),
-              games: [g("g-easy", 2, 1, 10), g("g-mixed", 1, 1, 10)],
+              totals: t(3, 2, 20 + state.perGameBump),
+              games: [g("g-easy", 2, 1, 10 + state.perGameBump), g("g-mixed", 1, 1, 10)],
             },
           ],
         },
@@ -586,5 +589,29 @@ describe("T28 — readable child stats with per-game results", () => {
 
     expect(await screen.findByTestId("user-stats-games")).toHaveTextContent("No games assigned.");
     expect(screen.queryByTestId("week-table")).toBeNull();
+  });
+});
+
+describe("T34 — stat pages refresh on their own", () => {
+  it("case 2: the child-stats page updates in place after 15 seconds", async () => {
+    const { state } = installServer();
+    state.users.find((user) => user.username === "child1")!.games = ["g-easy", "g-mixed"];
+    renderApp("/admin/users/u-child1/stats");
+
+    vi.useFakeTimers();
+    try {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(screen.getByTestId("today-game-g-easy")).toHaveTextContent("+0:10");
+
+      state.perGameBump = 20;
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(16_000);
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(screen.getByTestId("today-game-g-easy")).toHaveTextContent("+0:30");
   });
 });

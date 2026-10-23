@@ -6,6 +6,7 @@ import { api } from "../../../lib/api-client";
 export function usePerGame() {
   return useQuery({
     queryKey: ["per-game"],
+    refetchInterval: 15_000, // live stat pages: refresh while open
     queryFn: () => api.get<PerGameDailyResponse>("/stats/per-game", perGameDailyResponseSchema),
   });
 }

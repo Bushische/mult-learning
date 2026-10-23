@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import "../../test/setup";
 import { queryClient } from "../../lib/query-client";
 import { useAuthStore } from "../../stores/auth-store";
@@ -371,5 +371,43 @@ describe("T30 — child home redesign", () => {
 
     expect(await screen.findByTestId("offline-banner")).toBeInTheDocument();
     expect(screen.queryByTestId("daily-earned")).toHaveTextContent("+0:00");
+  });
+
+  it("case 6: the today card refreshes on its own every 15 seconds", async () => {
+    let earned = 20;
+    createApiStub({
+      "GET /me": () => ({
+        data: { id: "u-child", username: "child1", role: "user", timeBankSeconds: 45 },
+      }),
+      "GET /stats/heatmap": () => ({ data: { cells: [] } }),
+      "GET /stats/daily": () => ({
+        data: {
+          date: "2026-10-22",
+          totalTries: 3,
+          correctTries: 2,
+          timeEarnedSeconds: earned,
+          timeBankSeconds: 45,
+        },
+      }),
+      "GET /games": () => ({ data: GAMES }),
+      "GET /stats/per-game": () => ({ data: perGamePayload() }),
+    });
+    renderApp("/");
+
+    vi.useFakeTimers();
+    try {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(screen.getByTestId("daily-earned")).toHaveTextContent("+0:20");
+
+      earned = 50;
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(16_000);
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(screen.getByTestId("daily-earned")).toHaveTextContent("+0:50");
   });
 });

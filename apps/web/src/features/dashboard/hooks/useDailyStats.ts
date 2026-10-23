@@ -6,6 +6,7 @@ import { api } from "../../../lib/api-client";
 export function useDailyStats() {
   return useQuery({
     queryKey: ["daily"],
+    refetchInterval: 15_000, // live stat pages: refresh while open
     queryFn: () => api.get<DailyStats>("/stats/daily", dailyStatsSchema),
   });
 }

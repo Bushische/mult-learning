@@ -6,6 +6,7 @@ import { api } from "../../../lib/api-client";
 export function useHeatmap() {
   return useQuery({
     queryKey: ["heatmap"],
+    refetchInterval: 15_000, // live stat pages: refresh while open
     queryFn: () => api.get<HeatmapResponse>("/stats/heatmap", heatmapResponseSchema),
   });
 }

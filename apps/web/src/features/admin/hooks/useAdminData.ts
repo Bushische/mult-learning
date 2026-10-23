@@ -17,13 +17,18 @@ export function useAdminGames() {
 }
 
 export function useLeaderboard() {
-  return useQuery({ queryKey: ["admin", "leaderboard"], queryFn: fetchLeaderboard });
+  return useQuery({
+    queryKey: ["admin", "leaderboard"],
+    queryFn: fetchLeaderboard,
+    refetchInterval: 15_000, // live stat pages
+  });
 }
 
 export function useAdminDaily(date?: string) {
   return useQuery({
     queryKey: ["admin", "daily", date ?? "today"],
     queryFn: () => fetchAdminDaily(date),
+    refetchInterval: 15_000, // live stat pages
   });
 }
 
@@ -32,6 +37,7 @@ export function useAdminUserStats(id: string | undefined) {
     queryKey: ["admin", "user-stats", id ?? "unknown"],
     queryFn: () => fetchAdminUserStats(id as string),
     enabled: id !== undefined,
+    refetchInterval: 15_000, // live stat pages
   });
 }
 
@@ -41,5 +47,6 @@ export function useAdminPerGame(id: string | undefined) {
     queryKey: ["admin", "per-game", id ?? "unknown"],
     queryFn: () => fetchAdminPerGame(id as string),
     enabled: id !== undefined,
+    refetchInterval: 15_000, // live stat pages
   });
 }
