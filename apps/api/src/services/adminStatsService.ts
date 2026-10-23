@@ -1,7 +1,7 @@
-import type { AdminDailyRow, LeaderboardRow } from "@mult/shared";
+import type { AdminDailyRow, LeaderboardRow, PerGameDailyResponse } from "@mult/shared";
 import { and, eq, gte } from "drizzle-orm";
 import type { Db } from "../db/client.js";
-import { dailyStats, users } from "../db/schema.js";
+import { dailyStats, gameDailyStats, users } from "../db/schema.js";
 import { notFound } from "../errors.js";
 import { getHeatmap } from "./statsService.js";
 
@@ -119,6 +119,47 @@ export function getAdminDailyStats(db: Db, date: string): AdminDailyRow[] {
 /** `YYYY-MM-DD` for "today" (UTC). */
 export function todayDate(now: Date = new Date()): string {
   return now.toISOString().slice(0, 10);
+}
+
+/**
+ * Per-day per-game matrix for one user: the last `days` UTC dates ending today
+ * (oldest first), each with the games that have recorded answers that day.
+ * Shared by the admin child-stats page and (T30) the child home screen.
+ */
+export function getPerGameDaily(
+  db: Db,
+  userId: string,
+  days = 7,
+  now: Date = new Date(),
+): PerGameDailyResponse {
+  const user = db.select().from(users).where(eq(users.id, userId)).get();
+  if (!user) throw notFound("User not found");
+
+  const dates: string[] = [];
+  for (let offset = days - 1; offset >= 0; offset -= 1) {
+    const day = new Date(now.getTime() - offset * 24 * 60 * 60 * 1000);
+    dates.push(day.toISOString().slice(0, 10));
+  }
+  const rows = db
+    .select()
+    .from(gameDailyStats)
+    .where(and(eq(gameDailyStats.userId, userId), gte(gameDailyStats.date, dates[0] as string)))
+    .all();
+  return {
+    user: { id: user.id, username: user.username, timeBankSeconds: user.timeBankSeconds },
+    days: dates.map((date) => ({
+      date,
+      games: rows
+        .filter((row) => row.date === date)
+        .map((row) => ({
+          gameId: row.gameId,
+          totalTries: row.totalTries,
+          correctTries: row.correctTries,
+          timeEarnedSeconds: row.timeEarnedSeconds,
+        }))
+        .sort((a, b) => a.gameId.localeCompare(b.gameId)),
+    })),
+  };
 }
 
 export { and, eq };

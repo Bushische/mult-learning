@@ -5,6 +5,7 @@ import type { Db } from "../db/client.js";
 import {
   type User,
   dailyStats,
+  gameDailyStats,
   games,
   matrixStats,
   refreshTokens,
@@ -138,6 +139,7 @@ export function resetUserProgress(db: Db, id: string): void {
   db.transaction((tx) => {
     tx.delete(matrixStats).where(eq(matrixStats.userId, id)).run();
     tx.delete(dailyStats).where(eq(dailyStats.userId, id)).run();
+    tx.delete(gameDailyStats).where(eq(gameDailyStats.userId, id)).run();
     tx.update(users)
       .set({ timeBankSeconds: 0, updatedAt: new Date() })
       .where(eq(users.id, id))

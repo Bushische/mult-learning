@@ -17,3 +17,38 @@ export function formatDuration(seconds: number): string {
 export function formatBank(seconds: number): string {
   return formatDuration(seconds);
 }
+
+const SHORT_MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+/** Format a `YYYY-MM-DD` date as `DD.MMM` (`2026-10-22` → `22.Oct`). */
+export function formatDayLabel(date: string): string {
+  const [year, month, day] = date.split("-").map(Number);
+  if (
+    year === undefined ||
+    month === undefined ||
+    day === undefined ||
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    !Number.isInteger(day) ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31
+  ) {
+    return date;
+  }
+  return `${day}.${SHORT_MONTHS[month - 1] as string}`;
+}

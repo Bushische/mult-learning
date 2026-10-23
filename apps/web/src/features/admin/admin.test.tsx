@@ -156,6 +156,45 @@ function installServer(): { state: ServerState; stub: ApiStub } {
         },
       };
     },
+    "GET /admin/users/:id/per-game": (call) => {
+      const id = call.url.split("/").slice(-2, -1)[0] as string;
+      if (id !== "u-child1") {
+        return { status: 404, data: { error: { code: "NOT_FOUND", message: "nope" } } };
+      }
+      const iso = (ago: number) =>
+        new Date(Date.now() - ago * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      const g = (
+        gameId: string,
+        totalTries: number,
+        correctTries: number,
+        timeEarnedSeconds: number,
+      ) => ({
+        gameId,
+        totalTries,
+        correctTries,
+        timeEarnedSeconds,
+      });
+      return {
+        data: {
+          user: { id: "u-child1", username: "child1", timeBankSeconds: 45 },
+          days: [
+            { date: iso(6), games: [] },
+            { date: iso(5), games: [] },
+            { date: iso(4), games: [] },
+            { date: iso(3), games: [g("g-easy", 4, 3, 30)] },
+            { date: iso(2), games: [] },
+            {
+              date: iso(1),
+              games: [g("g-easy", 2, 2, 20), g("g-mixed", 1, 0, 0)],
+            },
+            {
+              date: iso(0),
+              games: [g("g-easy", 2, 1, 10), g("g-mixed", 1, 1, 10)],
+            },
+          ],
+        },
+      };
+    },
     "POST /admin/users": (call) => {
       const body = call.body as { username: string; pin: string; role?: "admin" | "user" };
       if (state.users.some((user) => user.username === body.username)) {
@@ -452,5 +491,49 @@ describe("T20 — child stats heatmap + week summary", () => {
     expect(screen.getByTestId("week-earned")).toHaveTextContent("Earned: 1:10");
     expect(screen.getByTestId("cell-2-5")).toHaveAttribute("data-color", "green");
     expect(screen.getByTestId("cell-2-6")).toHaveAttribute("data-color", "none");
+  });
+});
+
+describe("T28 — readable child stats with per-game results", () => {
+  const isoDate = (ago: number): string =>
+    new Date(Date.now() - ago * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+  it("case 1: the header shows today's earned plus per-game results", async () => {
+    const { state } = installServer();
+    state.users.find((user) => user.username === "child1")!.games = ["g-easy", "g-mixed"];
+    renderApp("/admin/users/u-child1/stats");
+
+    expect(await screen.findByTestId("user-stats-today")).toHaveTextContent("+0:20");
+    expect(screen.getByTestId("user-stats-today")).toHaveTextContent("today");
+    expect(screen.getByTestId("today-game-g-easy")).toHaveTextContent("Easy Twos");
+    expect(screen.getByTestId("today-game-g-easy")).toHaveTextContent("+0:10");
+    expect(screen.getByTestId("today-game-g-easy")).toHaveTextContent("1/2");
+    expect(screen.getByTestId("today-game-g-mixed")).toHaveTextContent("Mixed Table");
+    expect(screen.getByTestId("today-game-g-mixed")).toHaveTextContent("1/1");
+  });
+
+  it("case 2: the 7-day table has a row per day and a column per game", async () => {
+    const { state } = installServer();
+    state.users.find((user) => user.username === "child1")!.games = ["g-easy", "g-mixed"];
+    renderApp("/admin/users/u-child1/stats");
+
+    const table = await screen.findByTestId("week-table");
+    expect(within(table).getByText("Easy Twos")).toBeInTheDocument();
+    expect(within(table).getByText("Mixed Table")).toBeInTheDocument();
+    expect(within(table).getAllByTestId(/^week-row-/)).toHaveLength(7);
+
+    const played = screen.getByTestId(`week-cell-${isoDate(3)}-g-easy`);
+    expect(played).toHaveTextContent("+0:30");
+    expect(played).toHaveTextContent("3/4");
+    const idle = screen.getByTestId(`week-cell-${isoDate(2)}-g-easy`);
+    expect(idle).toHaveTextContent("—");
+  });
+
+  it("case 3: no assigned games shows a message and no table", async () => {
+    installServer();
+    renderApp("/admin/users/u-child1/stats");
+
+    expect(await screen.findByTestId("user-stats-games")).toHaveTextContent("No games assigned.");
+    expect(screen.queryByTestId("week-table")).toBeNull();
   });
 });

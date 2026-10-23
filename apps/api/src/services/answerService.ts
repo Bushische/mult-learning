@@ -2,7 +2,14 @@ import type { AnswerRequest, AnswerResponse } from "@mult/shared";
 import { computeRewardSeconds } from "@mult/shared";
 import { and, eq } from "drizzle-orm";
 import type { Db } from "../db/client.js";
-import { dailyStats, games, matrixStats, userGameAssignments, users } from "../db/schema.js";
+import {
+  dailyStats,
+  gameDailyStats,
+  games,
+  matrixStats,
+  userGameAssignments,
+  users,
+} from "../db/schema.js";
 import { forbidden, notFound } from "../errors.js";
 
 /** Today's UTC date (`YYYY-MM-DD`) — the key of the daily stats row. */
@@ -80,6 +87,39 @@ export function submitAnswer(db: Db, userId: string, request: AnswerRequest): An
       tx.insert(dailyStats)
         .values({
           userId,
+          date,
+          totalTries: 1,
+          correctTries: correct ? 1 : 0,
+          timeEarnedSeconds: earnedDelta,
+        })
+        .run();
+    }
+
+    const existingPerGame = tx
+      .select()
+      .from(gameDailyStats)
+      .where(
+        and(
+          eq(gameDailyStats.userId, userId),
+          eq(gameDailyStats.gameId, game.id),
+          eq(gameDailyStats.date, date),
+        ),
+      )
+      .get();
+    if (existingPerGame) {
+      tx.update(gameDailyStats)
+        .set({
+          totalTries: existingPerGame.totalTries + 1,
+          correctTries: existingPerGame.correctTries + (correct ? 1 : 0),
+          timeEarnedSeconds: existingPerGame.timeEarnedSeconds + earnedDelta,
+        })
+        .where(eq(gameDailyStats.id, existingPerGame.id))
+        .run();
+    } else {
+      tx.insert(gameDailyStats)
+        .values({
+          userId,
+          gameId: game.id,
           date,
           totalTries: 1,
           correctTries: correct ? 1 : 0,

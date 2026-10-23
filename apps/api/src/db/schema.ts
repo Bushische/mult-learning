@@ -80,6 +80,31 @@ export const dailyStats = sqliteTable(
 );
 
 /**
+ * Per-game daily stats (T28): one row per (user, game, day), upserted on each
+ * answer in the same transaction as `daily_stats`. Drives the per-game
+ * breakdowns on the admin child-stats page and the child home screen.
+ */
+export const gameDailyStats = sqliteTable(
+  "game_daily_stats",
+  {
+    id: text("id").primaryKey().$defaultFn(createId),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    gameId: text("game_id")
+      .notNull()
+      .references(() => games.id, { onDelete: "cascade" }),
+    date: text("date").notNull(),
+    totalTries: integer("total_tries").notNull().default(0),
+    correctTries: integer("correct_tries").notNull().default(0),
+    timeEarnedSeconds: integer("time_earned_seconds").notNull().default(0),
+  },
+  (table) => [
+    uniqueIndex("game_daily_stats_user_game_date_idx").on(table.userId, table.gameId, table.date),
+  ],
+);
+
+/**
  * Rotating refresh tokens. Only the sha256 hash is stored; the raw value lives
  * in the HttpOnly cookie (docs/API.md — the sessions section).
  */
@@ -119,6 +144,7 @@ export type NewUser = typeof users.$inferInsert;
 export type GameRow = typeof games.$inferSelect;
 export type NewGameRow = typeof games.$inferInsert;
 export type DailyStatRow = typeof dailyStats.$inferSelect;
+export type GameDailyStatRow = typeof gameDailyStats.$inferSelect;
 export type MatrixStatRow = typeof matrixStats.$inferSelect;
 export type UserGameAssignmentRow = typeof userGameAssignments.$inferSelect;
 export type RefreshTokenRow = typeof refreshTokens.$inferSelect;

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   fetchAdminDaily,
   fetchAdminGames,
+  fetchAdminPerGame,
   fetchAdminUserStats,
   fetchAdminUsers,
   fetchLeaderboard,
@@ -30,6 +31,15 @@ export function useAdminUserStats(id: string | undefined) {
   return useQuery({
     queryKey: ["admin", "user-stats", id ?? "unknown"],
     queryFn: () => fetchAdminUserStats(id as string),
+    enabled: id !== undefined,
+  });
+}
+
+/** Per-day per-game matrix for one child (T28 tables). */
+export function useAdminPerGame(id: string | undefined) {
+  return useQuery({
+    queryKey: ["admin", "per-game", id ?? "unknown"],
+    queryFn: () => fetchAdminPerGame(id as string),
     enabled: id !== undefined,
   });
 }

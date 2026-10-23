@@ -280,6 +280,38 @@ export const adminUserStatsResponseSchema = z.object({
 });
 export type AdminUserStatsResponse = z.infer<typeof adminUserStatsResponseSchema>;
 
+/** One game's numbers for one day (per-day per-game recording, T28). */
+export const perGameDayStatSchema = z.object({
+  gameId: idSchema,
+  totalTries: z.number().int().min(0),
+  correctTries: z.number().int().min(0),
+  timeEarnedSeconds: secondsSchema,
+});
+export type PerGameDayStat = z.infer<typeof perGameDayStatSchema>;
+
+/** One day of per-game numbers, newest day last. */
+export const perGameDailyDaySchema = z.object({
+  date: dateSchema,
+  games: z.array(perGameDayStatSchema),
+});
+export type PerGameDailyDay = z.infer<typeof perGameDailyDaySchema>;
+
+/** Per-day per-game matrix for one user (admin + child views share it). */
+export const perGameDailyResponseSchema = z.object({
+  user: z.object({
+    id: idSchema,
+    username: usernameSchema,
+    timeBankSeconds: secondsSchema,
+  }),
+  days: z.array(perGameDailyDaySchema),
+});
+export type PerGameDailyResponse = z.infer<typeof perGameDailyResponseSchema>;
+
+export const perGameDailyQuerySchema = z.object({
+  days: z.coerce.number().int().min(1).max(14).optional(),
+});
+export type PerGameDailyQuery = z.infer<typeof perGameDailyQuerySchema>;
+
 export const dailyStatsSchema = z.object({
   date: dateSchema,
   totalTries: z.number().int().min(0),

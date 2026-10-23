@@ -33,9 +33,10 @@ function tableNames(handle: DbHandle): string[] {
 describe("T3 — db layer", () => {
   it("case 1: migrate creates the 5 tables and is idempotent", () => {
     const handle = memoryDb();
-    // The 5 tables of docs/DATA_MODEL.md + the refresh-token table (T4).
+    // The tables of docs/DATA_MODEL.md + the refresh-token table (T4).
     const expected = [
       "daily_stats",
+      "game_daily_stats",
       "games",
       "matrix_stats",
       "refresh_tokens",

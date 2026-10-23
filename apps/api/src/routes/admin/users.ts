@@ -5,11 +5,13 @@ import {
   assignGamesRequestSchema,
   createUserRequestSchema,
   gameIdsListSchema,
+  perGameDailyQuerySchema,
+  perGameDailyResponseSchema,
   updateUserRequestSchema,
 } from "@mult/shared";
 import type { FastifyInstance } from "fastify";
 import { requireAdmin } from "../../plugins/auth.js";
-import { getAdminUserStats } from "../../services/adminStatsService.js";
+import { getAdminUserStats, getPerGameDaily } from "../../services/adminStatsService.js";
 import {
   createUser,
   deleteUser,
@@ -70,5 +72,12 @@ export async function adminUserRoutes(app: FastifyInstance): Promise<void> {
   app.get("/users/:id/stats", async (request) => {
     const { id } = request.params as IdParams;
     return adminUserStatsResponseSchema.parse(getAdminUserStats(app.db, id));
+  });
+
+  /** One child's per-day per-game matrix (last N days, default 7). */
+  app.get("/users/:id/per-game", async (request) => {
+    const { id } = request.params as IdParams;
+    const query = parseOrThrow(perGameDailyQuerySchema, request.query ?? {});
+    return perGameDailyResponseSchema.parse(getPerGameDaily(app.db, id, query.days ?? 7));
   });
 }

@@ -52,7 +52,10 @@ export function createApiStub(handlers: Record<string, StubHandler>): ApiStub {
     }
     const call: StubCall = { url, method, body, headers };
     calls.push(call);
-    const key = `${method} ${url.replace("/api", "")}`;
+    // The query string is not part of route matching (as on the server);
+    // handlers that need it read `call.url` themselves.
+    const path = url.replace("/api", "").split("?")[0] as string;
+    const key = `${method} ${path}`;
     const handler =
       handlers[key] ?? handlers[`${method} ${url}`] ?? findPatternHandler(handlers, key);
     if (!handler) {

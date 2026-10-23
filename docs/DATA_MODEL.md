@@ -53,6 +53,17 @@ General rules (fixed, stack-level):
 | correct_tries | integer NOT NULL, default 0 | |
 | time_earned_seconds | integer NOT NULL, default 0 | only positive deltas accumulate here |
 
+## game_daily_stats
+| Column | Type | Notes |
+|---|---|---|
+| id | text PK | cuid2 |
+| user_id | text, FK users.id ON DELETE CASCADE | UNIQUE (user_id, game_id, date) |
+| game_id | text, FK games.id ON DELETE CASCADE | wiped when the game is deleted |
+| date | text `YYYY-MM-DD` (UTC) | upserted on each answer, same transaction as `daily_stats` |
+| total_tries | integer NOT NULL, default 0 | answers in this game that day |
+| correct_tries | integer NOT NULL, default 0 | |
+| time_earned_seconds | integer NOT NULL, default 0 | only positive deltas accumulate here |
+
 ## matrix_stats
 | Column | Type | Notes |
 |---|---|---|

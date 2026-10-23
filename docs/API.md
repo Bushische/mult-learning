@@ -67,7 +67,8 @@
      `timeBank = clamp(current + timeDelta, 0, maxDailyTime)` — never negative, never above cap
      (surplus answers above the cap only count for stats, not for the bank).
   4. Write one `matrix_stats` row; upsert `daily_stats` (total_tries +1; correct_tries +1 when correct;
-     time_earned_seconds + timeDelta when positive only).
+     time_earned_seconds + timeDelta when positive only) and the matching `game_daily_stats`
+     row (same counters scoped to the answered game).
   - Response `{ "correct": boolean, "rightAnswer": number, "timeBankSeconds": number, "timeDelta": number }`
 
 ## Stats (read)
@@ -93,6 +94,7 @@
 | POST /admin/users/:id/reset | — | 204; wipes `matrix_stats` + `daily_stats` for the user, zeroes time bank |
 | GET /admin/leaderboard | — | `{ "today": LeaderboardRow[], "last7Days": LeaderboardRow[] }` (each row unchanged: `userId, username, timeEarnedSeconds, accuracy`, ranked by earned desc per window). `today` = `daily_stats` rows with `date` = today (UTC); `last7Days` = rolling 7-day window |
 | GET /admin/users/:id/stats | — | `{ "user": { "id", "username", "timeBankSeconds" }, "heatmap": [HeatmapCell], "last7Days": { "attempts", "correct", "incorrect", "earnedSeconds" } }` (heatmap = rolling 7-day window over the child's assigned ranges; totals = `daily_stats` sums in the window); 404 unknown id |
+| GET /admin/users/:id/per-game?days=7 (1..14, default 7) | — | `{ "user": { "id", "username", "timeBankSeconds" }, "days": [{ "date": "YYYY-MM-DD", "games": [{ "gameId", "totalTries", "correctTries", "timeEarnedSeconds" }] }] }` (oldest day first, today last; only games with answers that day appear); 404 unknown id |
 | GET /admin/stats/daily?date=YYYY-MM-DD (default today) | — | `[{ "userId", "username", "totalTries", "correctTries", "timeEarnedSeconds", "timeBankSeconds" }]` |
 | GET /admin/games | — | `Game[]` (all) |
 | POST /admin/games | `GameConfig` (see GET /games shape) | 201 game; 400 VALIDATION_ERROR on bad ranges (min ≤ max, factors 1..20, variantCount 3..6) |

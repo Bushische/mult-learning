@@ -5,6 +5,8 @@ import {
   type CreateUserRequest,
   type Game,
   type LeaderboardResponse,
+  type PerGameDailyQuery,
+  type PerGameDailyResponse,
   type UpdateUserRequest,
   adminDailyRowsSchema,
   adminUserSchema,
@@ -14,6 +16,7 @@ import {
   createUserRequestSchema,
   gamesListSchema,
   leaderboardResponseSchema,
+  perGameDailyResponseSchema,
   updateUserRequestSchema,
 } from "@mult/shared";
 import { api } from "../../lib/api-client";
@@ -65,4 +68,12 @@ export function resetAdminUser(id: string): Promise<void> {
 
 export function fetchAdminUserStats(id: string): Promise<AdminUserStatsResponse> {
   return api.get<AdminUserStatsResponse>(`/admin/users/${id}/stats`, adminUserStatsResponseSchema);
+}
+
+export function fetchAdminPerGame(id: string, days = 7): Promise<PerGameDailyResponse> {
+  const query: PerGameDailyQuery = { days };
+  return api.get<PerGameDailyResponse>(
+    `/admin/users/${id}/per-game?days=${query.days as number}`,
+    perGameDailyResponseSchema,
+  );
 }
