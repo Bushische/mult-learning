@@ -1,25 +1,25 @@
-import type { Game, PerGameDailyDay } from "@mult/shared";
+import type { PerGameDailyDay } from "@mult/shared";
 import { summarizeDay } from "../lib/daySummary";
-import { formatDayLabel, formatSignedDuration } from "../lib/format";
+import { formatDayLabel, formatDuration, formatSignedDuration } from "../lib/format";
 
 interface HistoryListProps {
   days: PerGameDailyDay[];
-  games: Game[];
 }
 
 /**
  * 7-day history: one line per day with activity — date, net earned time,
- * correct/attempts. Days with per-game rows show net; legacy pre-T28 days
- * (totals only) show the gross totals.
+ * correct/attempts, plus gross gain and actual loss. Days with per-game rows
+ * show recorded net; legacy pre-T28 days (totals only) show the gross totals.
  */
-export function HistoryList({ days, games }: HistoryListProps) {
-  const gamesById = new Map(games.map((game) => [game.id, game]));
+export function HistoryList({ days }: HistoryListProps) {
   const rows = [...days]
     .reverse()
     .map((day) => ({
       day,
-      summary: summarizeDay(day, gamesById, {
-        earnedSeconds: day.totals.timeEarnedSeconds,
+      summary: summarizeDay(day, {
+        earnedSeconds: day.totals.timeEarnedSeconds - day.totals.timeLostSeconds,
+        gainSeconds: day.totals.timeEarnedSeconds,
+        lostSeconds: day.totals.timeLostSeconds,
         correctTries: day.totals.correctTries,
         totalTries: day.totals.totalTries,
       }),
@@ -42,6 +42,9 @@ export function HistoryList({ days, games }: HistoryListProps) {
             <span className="font-bold">{formatSignedDuration(summary.earnedSeconds)}</span>
             <span className="text-sm text-slate-500">
               {summary.correctTries}/{summary.totalTries}
+            </span>
+            <span className="text-sm text-slate-500">
+              +{formatDuration(summary.gainSeconds)} −{formatDuration(summary.lostSeconds)}
             </span>
           </li>
         ))}

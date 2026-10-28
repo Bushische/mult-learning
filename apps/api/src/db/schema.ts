@@ -77,6 +77,7 @@ export const dailyStats = sqliteTable(
     totalTries: integer("total_tries").notNull().default(0),
     correctTries: integer("correct_tries").notNull().default(0),
     timeEarnedSeconds: integer("time_earned_seconds").notNull().default(0),
+    timeLostSeconds: integer("time_lost_seconds").notNull().default(0),
   },
   (table) => [uniqueIndex("daily_stats_user_date_idx").on(table.userId, table.date)],
 );
@@ -100,6 +101,7 @@ export const gameDailyStats = sqliteTable(
     totalTries: integer("total_tries").notNull().default(0),
     correctTries: integer("correct_tries").notNull().default(0),
     timeEarnedSeconds: integer("time_earned_seconds").notNull().default(0),
+    timeLostSeconds: integer("time_lost_seconds").notNull().default(0),
   },
   (table) => [
     uniqueIndex("game_daily_stats_user_game_date_idx").on(table.userId, table.gameId, table.date),

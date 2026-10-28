@@ -84,6 +84,7 @@ function installServer(): { state: ServerState; stub: ApiStub } {
         totalTries: 6,
         correctTries: 5,
         timeEarnedSeconds: 45,
+        timeLostSeconds: 0,
         timeBankSeconds: 45,
       },
     ],
@@ -171,16 +172,24 @@ function installServer(): { state: ServerState; stub: ApiStub } {
         totalTries: number,
         correctTries: number,
         timeEarnedSeconds: number,
+        timeLostSeconds = 0,
       ) => ({
         gameId,
         totalTries,
         correctTries,
         timeEarnedSeconds,
+        timeLostSeconds,
       });
-      const t = (totalTries: number, correctTries: number, timeEarnedSeconds: number) => ({
+      const t = (
+        totalTries: number,
+        correctTries: number,
+        timeEarnedSeconds: number,
+        timeLostSeconds = 0,
+      ) => ({
         totalTries,
         correctTries,
         timeEarnedSeconds,
+        timeLostSeconds,
       });
       return {
         data: {
@@ -190,7 +199,7 @@ function installServer(): { state: ServerState; stub: ApiStub } {
             { date: iso(5), totals: t(0, 0, 0), games: [] },
             // Legacy day: totals exist, no per-game breakdown (recorded before T28).
             { date: iso(4), totals: t(5, 4, 40), games: [] },
-            { date: iso(3), totals: t(4, 3, 30), games: [g("g-easy", 4, 3, 30)] },
+            { date: iso(3), totals: t(4, 3, 30, 5), games: [g("g-easy", 4, 3, 30, 5)] },
             { date: iso(2), totals: t(0, 0, 0), games: [] },
             {
               date: iso(1),
@@ -199,8 +208,8 @@ function installServer(): { state: ServerState; stub: ApiStub } {
             },
             {
               date: iso(0),
-              totals: t(3, 2, 20 + state.perGameBump),
-              games: [g("g-easy", 2, 1, 10 + state.perGameBump), g("g-mixed", 1, 1, 10)],
+              totals: t(3, 2, 20 + state.perGameBump, 5),
+              games: [g("g-easy", 2, 1, 10 + state.perGameBump, 5), g("g-mixed", 1, 1, 10)],
             },
           ],
         },
@@ -553,6 +562,9 @@ describe("T28 — readable child stats with per-game results", () => {
 
     expect(await screen.findByTestId("user-stats-today")).toHaveTextContent("+0:15");
     expect(screen.getByTestId("user-stats-today")).toHaveTextContent("today");
+    expect(screen.getByTestId("user-stats-pace")).toHaveTextContent("avg +0:07 per turn");
+    expect(screen.getByTestId("user-stats-pace")).toHaveTextContent("+0:20");
+    expect(screen.getByTestId("user-stats-pace")).toHaveTextContent("−0:05");
     expect(screen.getByTestId("today-game-g-easy")).toHaveTextContent("Easy Twos");
     expect(screen.getByTestId("today-game-g-easy")).toHaveTextContent("+0:10");
     expect(screen.getByTestId("today-game-g-easy")).toHaveTextContent("1/2");
@@ -580,10 +592,12 @@ describe("T28 — readable child stats with per-game results", () => {
     expect(played).toHaveTextContent("3/4");
     const idle = screen.getByTestId(`week-cell-${isoDate(2)}-g-easy`);
     expect(idle).toHaveTextContent("—");
-    // Played day: Total is net of penalties (30 earned − 1 wrong × 5).
+    // Played day: Total is net of penalties (30 earned − 5 lost).
     const playedTotal = screen.getByTestId(`week-total-${isoDate(3)}`);
     expect(playedTotal).toHaveTextContent("+0:25");
     expect(playedTotal).toHaveTextContent("3/4");
+    expect(playedTotal).toHaveTextContent("+0:30");
+    expect(playedTotal).toHaveTextContent("−0:05");
     // Legacy day: the Total column shows the day's numbers, game cells stay dashed.
     const legacyTotal = screen.getByTestId(`week-total-${isoDate(4)}`);
     expect(legacyTotal).toHaveTextContent("+0:40");

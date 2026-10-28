@@ -300,6 +300,7 @@ describe("T12 — play screen", () => {
           totalTries: 1,
           correctTries: 1,
           timeEarnedSeconds: 10,
+          timeLostSeconds: 0,
           timeBankSeconds: 10,
         },
       }),

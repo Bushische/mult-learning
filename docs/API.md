@@ -69,7 +69,8 @@
      — never negative, never above that day's cap
      (surplus answers above the cap only count for stats, not for the bank).
   4. Write one `matrix_stats` row; upsert `daily_stats` (total_tries +1; correct_tries +1 when correct;
-     time_earned_seconds + timeDelta when positive only) and the matching `game_daily_stats`
+     time_earned_seconds + timeDelta when positive only; time_lost_seconds − timeDelta when negative, i.e. only
+     what was actually taken from the bank) and the matching `game_daily_stats`
      row (same counters scoped to the answered game).
   - Response `{ "correct": boolean, "rightAnswer": number, "timeBankSeconds": number, "timeDelta": number }`
 
@@ -82,7 +83,7 @@
   `accuracy` = correct / tries (`null` when tries = 0). `color` buckets: `green` accuracy ≥ 0.8,
   `red` accuracy < 0.5, `mixed` in between, `none` when tries = 0. Cells cover the game's A×B range
   (`allowedCombinations` when set).
-- **GET /stats/daily** (auth) → `{ "date":"YYYY-MM-DD", "totalTries": n, "correctTries": n, "timeEarnedSeconds": n, "timeBankSeconds": n }`
+- **GET /stats/daily** (auth) → `{ "date":"YYYY-MM-DD", "totalTries": n, "correctTries": n, "timeEarnedSeconds": n, "timeLostSeconds": n, "timeBankSeconds": n }`
 - **GET /stats/per-game?days=7** (auth, 1..14, default 7) → same day×game matrix shape as
   the admin per-game endpoint, scoped to the signed-in user (oldest day first, today last).
 
@@ -98,8 +99,8 @@
 | POST /admin/users/:id/reset | — | 204; wipes `matrix_stats` + `daily_stats` for the user, zeroes time bank |
 | GET /admin/leaderboard | — | `{ "today": LeaderboardRow[], "last7Days": LeaderboardRow[] }` (each row unchanged: `userId, username, timeEarnedSeconds, accuracy`, ranked by earned desc per window). `today` = `daily_stats` rows with `date` = today (UTC); `last7Days` = rolling 7-day window |
 | GET /admin/users/:id/stats | — | `{ "user": { "id", "username", "timeBankSeconds" }, "heatmap": [HeatmapCell], "last7Days": { "attempts", "correct", "incorrect", "earnedSeconds" } }` (heatmap = rolling 7-day window over the child's assigned ranges; totals = `daily_stats` sums in the window); 404 unknown id |
-| GET /admin/users/:id/per-game?days=7 (1..14, default 7) | — | `{ "user": { "id", "username", "timeBankSeconds" }, "days": [{ "date": "YYYY-MM-DD", "totals": { "totalTries", "correctTries", "timeEarnedSeconds" }, "games": [{ "gameId", "totalTries", "correctTries", "timeEarnedSeconds" }] }] }` (oldest day first, today last; `totals` come from `daily_stats` so pre-T28 days still show; only games with answers that day appear); 404 unknown id |
-| GET /admin/stats/daily?date=YYYY-MM-DD (default today) | — | `[{ "userId", "username", "totalTries", "correctTries", "timeEarnedSeconds", "timeBankSeconds" }]` |
+| GET /admin/users/:id/per-game?days=7 (1..14, default 7) | — | `{ "user": { "id", "username", "timeBankSeconds" }, "days": [{ "date": "YYYY-MM-DD", "totals": { "totalTries", "correctTries", "timeEarnedSeconds", "timeLostSeconds" }, "games": [{ "gameId", "totalTries", "correctTries", "timeEarnedSeconds", "timeLostSeconds" }] }] }` (oldest day first, today last; `totals` come from `daily_stats` so pre-T28 days still show; only games with answers that day appear); 404 unknown id |
+| GET /admin/stats/daily?date=YYYY-MM-DD (default today) | — | `[{ "userId", "username", "totalTries", "correctTries", "timeEarnedSeconds", "timeLostSeconds", "timeBankSeconds" }]` |
 | GET /admin/games | — | `Game[]` (all) |
 | POST /admin/games | `GameConfig` (see GET /games shape) | 201 game; 400 VALIDATION_ERROR on bad ranges (min ≤ max, factors 1..20, variantCount 3..6) |
 | PATCH /admin/games/:id | partial `GameConfig` | updated game; 404 unknown id |

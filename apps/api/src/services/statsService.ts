@@ -95,6 +95,7 @@ export function getDailyStats(db: Db, userId: string, now: Date = new Date()): D
     totalTries: row?.totalTries ?? 0,
     correctTries: row?.correctTries ?? 0,
     timeEarnedSeconds: row?.timeEarnedSeconds ?? 0,
+    timeLostSeconds: row?.timeLostSeconds ?? 0,
     timeBankSeconds: user?.timeBankSeconds ?? 0,
   };
 }
@@ -140,6 +141,7 @@ export function getPerGameDaily(
           totalTries: daily?.totalTries ?? 0,
           correctTries: daily?.correctTries ?? 0,
           timeEarnedSeconds: daily?.timeEarnedSeconds ?? 0,
+          timeLostSeconds: daily?.timeLostSeconds ?? 0,
         },
         games: rows
           .filter((row) => row.date === date)
@@ -148,6 +150,7 @@ export function getPerGameDaily(
             totalTries: row.totalTries,
             correctTries: row.correctTries,
             timeEarnedSeconds: row.timeEarnedSeconds,
+            timeLostSeconds: row.timeLostSeconds,
           }))
           .sort((a, b) => a.gameId.localeCompare(b.gameId)),
       };

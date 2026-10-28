@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { dailyStats, games, matrixStats, users } from "../db/schema.js";
+import { dailyStats, gameDailyStats, games, matrixStats, users } from "../db/schema.js";
 import { todayUtc } from "../services/answerService.js";
 import { type TestApp, createTestApp } from "../test/helper.js";
 
@@ -330,5 +330,106 @@ describe("T39 — per-day time bank", () => {
       payload: { gameId: easyTwosId, factorA: 2, factorB: 3, chosen: 6, elapsedMs: 0 },
     });
     expect(response.statusCode).toBe(401);
+  });
+});
+
+describe("T40 — recorded gain and loss", () => {
+  function userId(): string {
+    return ctx.db.select().from(users).where(eq(users.username, "child1")).get()?.id ?? "";
+  }
+
+  it("case 4: only actually taken seconds count as lost", async () => {
+    const id = userId();
+    // correct (+10), then wrong with a funded bank (−5 taken)
+    await answer({ gameId: easyTwosId, factorA: 2, factorB: 3, chosen: 6, elapsedMs: 0 });
+    await answer({ gameId: easyTwosId, factorA: 2, factorB: 3, chosen: 5, elapsedMs: 0 });
+
+    const daily = ctx.db
+      .select()
+      .from(dailyStats)
+      .where(and(eq(dailyStats.userId, id), eq(dailyStats.date, todayUtc())))
+      .get();
+    expect(daily).toMatchObject({
+      totalTries: 2,
+      correctTries: 1,
+      timeEarnedSeconds: 10,
+      timeLostSeconds: 5,
+    });
+
+    const perGame = ctx.db.select().from(gameDailyStats).where(eq(gameDailyStats.userId, id)).all();
+    expect(perGame).toHaveLength(1);
+    expect(perGame[0]).toMatchObject({
+      totalTries: 2,
+      correctTries: 1,
+      timeEarnedSeconds: 10,
+      timeLostSeconds: 5,
+    });
+
+    // wrong at an empty bank takes nothing: lost stays, bank stays 0
+    ctx.db
+      .update(users)
+      .set({ timeBankSeconds: 0, bankDate: todayUtc() })
+      .where(eq(users.id, id))
+      .run();
+    const timeout = await answer({
+      gameId: easyTwosId,
+      factorA: 2,
+      factorB: 3,
+      chosen: null,
+      elapsedMs: 15000,
+    });
+    expect(timeout.json()).toMatchObject({ correct: false, timeDelta: 0, timeBankSeconds: 0 });
+    const after = ctx.db
+      .select()
+      .from(dailyStats)
+      .where(and(eq(dailyStats.userId, id), eq(dailyStats.date, todayUtc())))
+      .get();
+    expect(after).toMatchObject({
+      totalTries: 3,
+      correctTries: 1,
+      timeEarnedSeconds: 10,
+      timeLostSeconds: 5,
+    });
+  });
+
+  it("case 5: reset wipes the gain/loss counters", async () => {
+    const id = userId();
+    await answer({ gameId: easyTwosId, factorA: 2, factorB: 3, chosen: 6, elapsedMs: 0 });
+
+    const adminLogin = await ctx.app.inject({
+      method: "POST",
+      url: "/api/auth/login",
+      payload: { username: "admin", pin: "1289" },
+    });
+    const reset = await ctx.app.inject({
+      method: "POST",
+      url: `/api/admin/users/${id}/reset`,
+      headers: { authorization: `Bearer ${adminLogin.json().accessToken as string}` },
+    });
+    expect(reset.statusCode).toBe(204);
+    expect(ctx.db.select().from(dailyStats).where(eq(dailyStats.userId, id)).all()).toHaveLength(0);
+    expect(
+      ctx.db.select().from(gameDailyStats).where(eq(gameDailyStats.userId, id)).all(),
+    ).toHaveLength(0);
+
+    const response = await answer({
+      gameId: easyTwosId,
+      factorA: 2,
+      factorB: 3,
+      chosen: 6,
+      elapsedMs: 0,
+    });
+    expect(response.json()).toMatchObject({ correct: true, timeDelta: 10, timeBankSeconds: 10 });
+    const daily = ctx.db
+      .select()
+      .from(dailyStats)
+      .where(and(eq(dailyStats.userId, id), eq(dailyStats.date, todayUtc())))
+      .get();
+    expect(daily).toMatchObject({
+      totalTries: 1,
+      correctTries: 1,
+      timeEarnedSeconds: 10,
+      timeLostSeconds: 0,
+    });
   });
 });

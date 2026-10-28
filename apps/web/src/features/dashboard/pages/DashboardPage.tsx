@@ -20,7 +20,6 @@ export function DashboardPage() {
     heatmapQuery.isError || dailyQuery.isError || gamesQuery.isError || perGameQuery.isError;
 
   const games = gamesQuery.data ?? [];
-  const gamesById = new Map(games.map((game) => [game.id, game]));
   const days = perGameQuery.data?.days ?? [];
   const todayEntry = days[days.length - 1];
   const todayGames = todayEntry?.games ?? [];
@@ -35,11 +34,14 @@ export function DashboardPage() {
     ]),
   );
   const daily = dailyQuery.data;
-  const today = summarizeDay(todayEntry, gamesById, {
-    earnedSeconds: daily?.timeEarnedSeconds ?? 0,
+  const today = summarizeDay(todayEntry, {
+    earnedSeconds: (daily?.timeEarnedSeconds ?? 0) - (daily?.timeLostSeconds ?? 0),
+    gainSeconds: daily?.timeEarnedSeconds ?? 0,
+    lostSeconds: daily?.timeLostSeconds ?? 0,
     correctTries: daily?.correctTries ?? 0,
     totalTries: daily?.totalTries ?? 0,
   });
+  const todayAvg = today.totalTries > 0 ? Math.round(today.gainSeconds / today.totalTries) : 0;
 
   return (
     <div className="min-h-screen">
@@ -58,6 +60,9 @@ export function DashboardPage() {
           earnedSeconds={today.earnedSeconds}
           correctTries={today.correctTries}
           totalTries={today.totalTries}
+          gainSeconds={today.gainSeconds}
+          lostSeconds={today.lostSeconds}
+          avgSeconds={todayAvg}
         />
 
         <section>
@@ -65,7 +70,7 @@ export function DashboardPage() {
           <GameList games={games} todayByGame={todayByGame} />
         </section>
 
-        <HistoryList days={days} games={games} />
+        <HistoryList days={days} />
 
         <section className="rounded-2xl bg-white p-4 shadow-sm">
           <h2 className="mb-2 text-lg font-bold">Heatmap</h2>

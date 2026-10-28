@@ -53,6 +53,7 @@ General rules (fixed, stack-level):
 | total_tries | integer NOT NULL, default 0 | |
 | correct_tries | integer NOT NULL, default 0 | |
 | time_earned_seconds | integer NOT NULL, default 0 | only positive deltas accumulate here |
+| time_lost_seconds | integer NOT NULL, default 0 | only actually taken seconds accumulate here (0 at an empty bank) |
 
 ## game_daily_stats
 | Column | Type | Notes |
@@ -64,6 +65,7 @@ General rules (fixed, stack-level):
 | total_tries | integer NOT NULL, default 0 | answers in this game that day |
 | correct_tries | integer NOT NULL, default 0 | |
 | time_earned_seconds | integer NOT NULL, default 0 | only positive deltas accumulate here |
+| time_lost_seconds | integer NOT NULL, default 0 | only actually taken seconds accumulate here |
 
 ## matrix_stats
 | Column | Type | Notes |

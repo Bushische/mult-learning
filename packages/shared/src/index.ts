@@ -329,6 +329,7 @@ export const perGameDayStatSchema = z.object({
   totalTries: z.number().int().min(0),
   correctTries: z.number().int().min(0),
   timeEarnedSeconds: secondsSchema,
+  timeLostSeconds: secondsSchema,
 });
 export type PerGameDayStat = z.infer<typeof perGameDayStatSchema>;
 
@@ -339,6 +340,7 @@ export const perGameDailyDaySchema = z.object({
     totalTries: z.number().int().min(0),
     correctTries: z.number().int().min(0),
     timeEarnedSeconds: secondsSchema,
+    timeLostSeconds: secondsSchema,
   }),
   games: z.array(perGameDayStatSchema),
 });
@@ -365,6 +367,7 @@ export const dailyStatsSchema = z.object({
   totalTries: z.number().int().min(0),
   correctTries: z.number().int().min(0),
   timeEarnedSeconds: secondsSchema,
+  timeLostSeconds: secondsSchema,
   timeBankSeconds: secondsSchema,
 });
 export type DailyStats = z.infer<typeof dailyStatsSchema>;
@@ -383,6 +386,7 @@ export const adminDailyRowSchema = z.object({
   totalTries: z.number().int().min(0),
   correctTries: z.number().int().min(0),
   timeEarnedSeconds: secondsSchema,
+  timeLostSeconds: secondsSchema,
   timeBankSeconds: secondsSchema,
 });
 export type AdminDailyRow = z.infer<typeof adminDailyRowSchema>;

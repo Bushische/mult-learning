@@ -54,11 +54,14 @@ export function UserStatsPage() {
   const summary = stats?.last7Days;
   const days = perGame?.days ?? [];
   const todayEntry = days[days.length - 1];
-  const today = summarizeDay(todayEntry, gamesById, {
+  const today = summarizeDay(todayEntry, {
     earnedSeconds: 0,
+    gainSeconds: 0,
+    lostSeconds: 0,
     correctTries: 0,
     totalTries: 0,
   });
+  const todayAvg = today.totalTries > 0 ? Math.round(today.gainSeconds / today.totalTries) : 0;
   const todayGames = todayEntry?.games ?? [];
   const todayEarned = today.earnedSeconds;
   const todayTries = today.totalTries;
@@ -78,6 +81,10 @@ export function UserStatsPage() {
           </p>
           <p className="text-sm text-slate-500">
             {todayCorrect}/{todayTries} correct today
+          </p>
+          <p className="text-sm text-slate-500" data-testid="user-stats-pace">
+            avg {formatSignedDuration(todayAvg)} per turn · +{formatDuration(today.gainSeconds)}{" "}
+            earned · −{formatDuration(today.lostSeconds)} lost
           </p>
           <p className="text-slate-600" data-testid="user-stats-bank">
             {formatDuration(user.timeBankSeconds)} bank
@@ -124,8 +131,10 @@ export function UserStatsPage() {
               </thead>
               <tbody>
                 {[...days].reverse().map((day) => {
-                  const summary = summarizeDay(day, gamesById, {
+                  const summary = summarizeDay(day, {
                     earnedSeconds: 0,
+                    gainSeconds: 0,
+                    lostSeconds: 0,
                     correctTries: 0,
                     totalTries: 0,
                   });
@@ -134,7 +143,7 @@ export function UserStatsPage() {
                       <td className="py-2 font-semibold">{formatDayLabel(day.date)}</td>
                       <td className="py-2 font-semibold" data-testid={`week-total-${day.date}`}>
                         {summary.totalTries > 0
-                          ? `${formatSignedDuration(summary.earnedSeconds)} · ${summary.correctTries}/${summary.totalTries}`
+                          ? `${formatSignedDuration(summary.earnedSeconds)} · ${summary.correctTries}/${summary.totalTries} (+${formatDuration(summary.gainSeconds)} −${formatDuration(summary.lostSeconds)})`
                           : "—"}
                       </td>
                       {assignedGames.map((game) => {

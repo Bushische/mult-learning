@@ -75,12 +75,16 @@ export function submitAnswer(db: Db, userId: string, request: AnswerRequest): An
       .get();
 
     const earnedDelta = appliedDelta > 0 ? appliedDelta : 0;
+    // Actual loss: what was really taken from the bank (0 at an empty bank —
+    // never the nominal penalty).
+    const lostDelta = appliedDelta < 0 ? -appliedDelta : 0;
     if (existing) {
       tx.update(dailyStats)
         .set({
           totalTries: existing.totalTries + 1,
           correctTries: existing.correctTries + (correct ? 1 : 0),
           timeEarnedSeconds: existing.timeEarnedSeconds + earnedDelta,
+          timeLostSeconds: existing.timeLostSeconds + lostDelta,
         })
         .where(eq(dailyStats.id, existing.id))
         .run();
@@ -92,6 +96,7 @@ export function submitAnswer(db: Db, userId: string, request: AnswerRequest): An
           totalTries: 1,
           correctTries: correct ? 1 : 0,
           timeEarnedSeconds: earnedDelta,
+          timeLostSeconds: lostDelta,
         })
         .run();
     }
@@ -113,6 +118,7 @@ export function submitAnswer(db: Db, userId: string, request: AnswerRequest): An
           totalTries: existingPerGame.totalTries + 1,
           correctTries: existingPerGame.correctTries + (correct ? 1 : 0),
           timeEarnedSeconds: existingPerGame.timeEarnedSeconds + earnedDelta,
+          timeLostSeconds: existingPerGame.timeLostSeconds + lostDelta,
         })
         .where(eq(gameDailyStats.id, existingPerGame.id))
         .run();
@@ -125,6 +131,7 @@ export function submitAnswer(db: Db, userId: string, request: AnswerRequest): An
           totalTries: 1,
           correctTries: correct ? 1 : 0,
           timeEarnedSeconds: earnedDelta,
+          timeLostSeconds: lostDelta,
         })
         .run();
     }

@@ -61,6 +61,7 @@ describe("T11 — dashboard", () => {
           totalTries: 0,
           correctTries: 0,
           timeEarnedSeconds: 0,
+          timeLostSeconds: 0,
           timeBankSeconds: 2700,
         },
       }),
@@ -104,6 +105,7 @@ describe("T11 — dashboard", () => {
           totalTries: 6,
           correctTries: 2,
           timeEarnedSeconds: 20,
+          timeLostSeconds: 0,
           timeBankSeconds: 45,
         },
       }),
@@ -138,6 +140,7 @@ describe("T11 — dashboard", () => {
           totalTries: 0,
           correctTries: 0,
           timeEarnedSeconds: 0,
+          timeLostSeconds: 0,
           timeBankSeconds: 45,
         },
       }),
@@ -163,6 +166,7 @@ describe("T11 — dashboard", () => {
           totalTries: 6,
           correctTries: 2,
           timeEarnedSeconds: 20,
+          timeLostSeconds: 0,
           timeBankSeconds: 45,
         },
       }),
@@ -191,6 +195,7 @@ describe("T11 — dashboard", () => {
           totalTries: 0,
           correctTries: 0,
           timeEarnedSeconds: 0,
+          timeLostSeconds: 0,
           timeBankSeconds: 45,
         },
       }),
@@ -221,6 +226,7 @@ describe("T11 — dashboard", () => {
           totalTries: 0,
           correctTries: 0,
           timeEarnedSeconds: 0,
+          timeLostSeconds: 0,
           timeBankSeconds: 45,
         },
       }),
@@ -271,11 +277,18 @@ describe("T30 — child home redesign", () => {
       totalTries: number,
       correctTries: number,
       timeEarnedSeconds: number,
-    ) => ({ gameId, totalTries, correctTries, timeEarnedSeconds });
-    const t = (totalTries: number, correctTries: number, timeEarnedSeconds: number) => ({
+      timeLostSeconds = 0,
+    ) => ({ gameId, totalTries, correctTries, timeEarnedSeconds, timeLostSeconds });
+    const t = (
+      totalTries: number,
+      correctTries: number,
+      timeEarnedSeconds: number,
+      timeLostSeconds = 0,
+    ) => ({
       totalTries,
       correctTries,
       timeEarnedSeconds,
+      timeLostSeconds,
     });
     return {
       user: { id: "u-child", username: "child1", timeBankSeconds: 45 },
@@ -283,17 +296,17 @@ describe("T30 — child home redesign", () => {
         { date: isoDate(6), totals: t(0, 0, 0), games: [] },
         { date: isoDate(5), totals: t(0, 0, 0), games: [] },
         { date: isoDate(4), totals: t(0, 0, 0), games: [] },
-        { date: isoDate(3), totals: t(4, 3, 30), games: [g("g-easy", 4, 3, 30)] },
+        { date: isoDate(3), totals: t(4, 3, 30, 5), games: [g("g-easy", 4, 3, 30, 5)] },
         { date: isoDate(2), totals: t(0, 0, 0), games: [] },
         {
           date: isoDate(1),
-          totals: t(3, 2, 20),
-          games: [g("g-easy", 2, 2, 20), g("g-mixed", 1, 0, 0)],
+          totals: t(3, 2, 20, 5),
+          games: [g("g-easy", 2, 2, 20), g("g-mixed", 1, 0, 0, 5)],
         },
         {
           date: isoDate(0),
-          totals: t(3, 2, 20),
-          games: [g("g-easy", 2, 1, 10), g("g-mixed", 1, 1, 10)],
+          totals: t(3, 2, 20, 5),
+          games: [g("g-easy", 2, 1, 10, 5), g("g-mixed", 1, 1, 10)],
         },
       ],
     };
@@ -315,6 +328,7 @@ describe("T30 — child home redesign", () => {
           totalTries: 3,
           correctTries: 2,
           timeEarnedSeconds: 20,
+          timeLostSeconds: 0,
           timeBankSeconds: 45,
         },
       }),
@@ -332,6 +346,9 @@ describe("T30 — child home redesign", () => {
       expect(screen.getByTestId("daily-earned")).toHaveTextContent("+0:15");
     });
     expect(screen.getByTestId("daily-tries")).toHaveTextContent("2/3 correct today");
+    expect(screen.getByTestId("daily-avg")).toHaveTextContent("avg +0:07 per turn");
+    expect(screen.getByTestId("daily-gain")).toHaveTextContent("+0:20");
+    expect(screen.getByTestId("daily-loss")).toHaveTextContent("−0:05");
   });
 
   it("case 2: every game row shows prices and the net today total", async () => {
@@ -362,6 +379,8 @@ describe("T30 — child home redesign", () => {
     const row = screen.getByTestId(`history-day-${isoDate(3)}`);
     expect(row).toHaveTextContent("+0:25");
     expect(row).toHaveTextContent("3/4");
+    expect(row).toHaveTextContent("+0:30");
+    expect(row).toHaveTextContent("−0:05");
     expect(screen.queryByTestId(`history-day-${isoDate(2)}`)).toBeNull();
   });
 
@@ -386,7 +405,7 @@ describe("T30 — child home redesign", () => {
   });
 
   it("case 6: the today card refreshes on its own every 15 seconds", async () => {
-    const live = { tries: 2, correct: 1, earned: 10 };
+    const live = { tries: 2, correct: 1, earned: 10, lost: 5 };
     createApiStub({
       "GET /me": () => ({
         data: { id: "u-child", username: "child1", role: "user", timeBankSeconds: 45 },
@@ -398,6 +417,7 @@ describe("T30 — child home redesign", () => {
           totalTries: 0,
           correctTries: 0,
           timeEarnedSeconds: 0,
+          timeLostSeconds: 0,
           timeBankSeconds: 45,
         },
       }),
@@ -412,6 +432,7 @@ describe("T30 — child home redesign", () => {
                 totalTries: live.tries,
                 correctTries: live.correct,
                 timeEarnedSeconds: live.earned,
+                timeLostSeconds: live.lost,
               },
               games: [
                 {
@@ -419,6 +440,7 @@ describe("T30 — child home redesign", () => {
                   totalTries: live.tries,
                   correctTries: live.correct,
                   timeEarnedSeconds: live.earned,
+                  timeLostSeconds: live.lost,
                 },
               ],
             },
@@ -462,6 +484,7 @@ describe("T35 — dashboard header shows today's gain", () => {
           totalTries: 0,
           correctTries: 0,
           timeEarnedSeconds: earned,
+          timeLostSeconds: 0,
           timeBankSeconds: bank,
         },
       }),
@@ -514,7 +537,7 @@ describe("T35 — dashboard header shows today's gain", () => {
 describe("T36 — per-game cards show correct / wrong / today total", () => {
   const isoDate = (ago: number): string =>
     new Date(Date.now() - ago * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const state = { tries: 3, correct: 2, earned: 20 };
+  const state = { tries: 3, correct: 2, earned: 20, lost: 5 };
 
   function t36Stub() {
     return createApiStub({
@@ -528,6 +551,7 @@ describe("T36 — per-game cards show correct / wrong / today total", () => {
           totalTries: 3,
           correctTries: 2,
           timeEarnedSeconds: 20,
+          timeLostSeconds: 0,
           timeBankSeconds: 45,
         },
       }),
@@ -538,7 +562,7 @@ describe("T36 — per-game cards show correct / wrong / today total", () => {
           days: [
             ...[6, 5, 4, 3, 2, 1].map((ago) => ({
               date: isoDate(ago),
-              totals: { totalTries: 0, correctTries: 0, timeEarnedSeconds: 0 },
+              totals: { totalTries: 0, correctTries: 0, timeEarnedSeconds: 0, timeLostSeconds: 0 },
               games: [],
             })),
             {
@@ -547,6 +571,7 @@ describe("T36 — per-game cards show correct / wrong / today total", () => {
                 totalTries: state.tries,
                 correctTries: state.correct,
                 timeEarnedSeconds: state.earned,
+                timeLostSeconds: state.lost,
               },
               games: [
                 {
@@ -554,6 +579,7 @@ describe("T36 — per-game cards show correct / wrong / today total", () => {
                   totalTries: state.tries,
                   correctTries: state.correct,
                   timeEarnedSeconds: state.earned,
+                  timeLostSeconds: state.lost,
                 },
               ],
             },

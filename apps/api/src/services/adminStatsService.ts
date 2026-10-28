@@ -113,6 +113,7 @@ export function getAdminDailyStats(db: Db, date: string): AdminDailyRow[] {
         totalTries: row?.totalTries ?? 0,
         correctTries: row?.correctTries ?? 0,
         timeEarnedSeconds: row?.timeEarnedSeconds ?? 0,
+        timeLostSeconds: row?.timeLostSeconds ?? 0,
         timeBankSeconds: user.timeBankSeconds,
       };
     });
