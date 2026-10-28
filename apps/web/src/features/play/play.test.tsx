@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "../../test/setup";
 import type { Game } from "@mult/shared";
-import { computeRewardSeconds, matchingMagicRules } from "@mult/shared";
+import { applyOp, computeRewardSeconds, matchingMagicRules } from "@mult/shared";
 import { useAuthStore } from "../../stores/auth-store";
 import { createApiStub, renderApp, resetSession } from "../../test/harness";
 import { CountdownBar } from "./components/CountdownBar";
@@ -101,13 +101,14 @@ function apiStub(extra: Record<string, (call: { body: unknown }) => { data?: unk
       }
       const body = call.body as {
         gameId: string;
+        operation?: "add" | "sub" | "mul" | "div";
         factorA: number;
         factorB: number;
         chosen: number | null;
         elapsedMs: number;
       };
       const played = ALL_GAMES.find((game) => game.id === body.gameId) ?? GAME;
-      const rightAnswer = body.factorA * body.factorB;
+      const rightAnswer = applyOp(body.factorA, body.factorB, body.operation ?? "mul");
       const correct = body.chosen !== null && body.chosen === rightAnswer;
       const reward = computeRewardSeconds({
         baseTimeReward: played.baseTimeReward,

@@ -1,5 +1,5 @@
 import type { AnswerRequest, AnswerResponse } from "@mult/shared";
-import { computeRewardSeconds } from "@mult/shared";
+import { applyOp, computeRewardSeconds } from "@mult/shared";
 import { and, eq } from "drizzle-orm";
 import type { Db } from "../db/client.js";
 import {
@@ -33,7 +33,7 @@ export function submitAnswer(db: Db, userId: string, request: AnswerRequest): An
     .get();
   if (!assignment) throw forbidden("This game is not assigned to you");
 
-  const rightAnswer = request.factorA * request.factorB;
+  const rightAnswer = applyOp(request.factorA, request.factorB, request.operation);
   const correct = request.chosen !== null && request.chosen === rightAnswer;
   const reward = computeRewardSeconds({
     baseTimeReward: game.baseTimeReward,

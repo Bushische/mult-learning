@@ -160,6 +160,7 @@ export function PlayPage({ gameId, questionSeconds }: PlayPageProps) {
       try {
         const result = await submitAnswer({
           gameId: game.id,
+          operation: question.operation,
           factorA: question.factorA,
           factorB: question.factorB,
           chosen: value,

@@ -90,3 +90,56 @@ describe("T26 — misleading distractor options", () => {
     expect(third).toEqual(fourth);
   });
 });
+
+describe("T43 — mixed-operation questions", () => {
+  const MIXED: Game = {
+    ...GAME,
+    id: "g-mixed-ops",
+    name: "Mixed Ops",
+    operations: ["add", "sub", "mul", "div"],
+  };
+
+  it("case 1: every operation appears and every question stays in range", () => {
+    const seen = new Set<string>();
+    for (let i = 0; i < 200; i += 1) {
+      const question = generateQuestion(MIXED, createSeededRng(7000 + i));
+      seen.add(question.operation);
+      expect(question.factorA).toBeGreaterThanOrEqual(2);
+      expect(question.factorA).toBeLessThanOrEqual(4);
+      expect(question.factorB).toBeGreaterThanOrEqual(1);
+      expect(question.factorB).toBeLessThanOrEqual(4);
+      expect(question.options).toHaveLength(3);
+      expect(question.options.filter((value) => value === question.rightAnswer)).toHaveLength(1);
+    }
+    expect([...seen].sort()).toEqual(["add", "div", "mul", "sub"]);
+  });
+
+  it("case 2: no negative subtractions, only exact divisions", () => {
+    for (let i = 0; i < 200; i += 1) {
+      const question = generateQuestion(MIXED, createSeededRng(9000 + i));
+      if (question.operation === "sub") {
+        expect(question.factorA).toBeGreaterThan(question.factorB);
+        expect(question.rightAnswer).toBe(question.factorA - question.factorB);
+      }
+      if (question.operation === "div") {
+        expect(question.factorB).toBeGreaterThanOrEqual(1);
+        expect(question.factorA % question.factorB).toBe(0);
+        expect(question.rightAnswer).toBe(question.factorA / question.factorB);
+      }
+      if (question.operation === "add") {
+        expect(question.rightAnswer).toBe(question.factorA + question.factorB);
+      }
+      if (question.operation === "mul") {
+        expect(question.rightAnswer).toBe(question.factorA * question.factorB);
+      }
+    }
+  });
+
+  it("case 3: a mul-only game behaves like today (only ×)", () => {
+    for (let i = 0; i < 50; i += 1) {
+      const question = generateQuestion(GAME, createSeededRng(i));
+      expect(question.operation).toBe("mul");
+      expect(question.rightAnswer).toBe(question.factorA * question.factorB);
+    }
+  });
+});

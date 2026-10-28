@@ -465,3 +465,77 @@ describe("T40 — recorded gain and loss", () => {
     });
   });
 });
+
+describe("T44 — answer checking per operation", () => {
+  async function mixedGameId(): Promise<string> {
+    const now = new Date();
+    const inserted = ctx.db
+      .insert(games)
+      .values({
+        name: "Mixed Ops",
+        operationsJson: JSON.stringify(["add", "sub", "mul", "div"]),
+        rangeAMin: 1,
+        rangeAMax: 10,
+        rangeBMin: 1,
+        rangeBMax: 10,
+        allowedCombinationsJson: null,
+        variantCount: 3,
+        baseTimeReward: 10,
+        timePenalty: 5,
+        maxDailyTime: 3600,
+        questionSeconds: 15,
+        hintsJson: "[]",
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning()
+      .get();
+    const child = ctx.db.select().from(users).where(eq(users.username, "child1")).get();
+    const { userGameAssignments } = await import("../db/schema.js");
+    ctx.db.insert(userGameAssignments).values({ userId: child?.id ?? "", gameId: inserted.id }).run();
+    return inserted.id;
+  }
+
+  it("case 1: correct answers for + − × ÷ are all accepted", async () => {
+    const gameId = await mixedGameId();
+    for (const [operation, factorA, factorB, chosen] of [
+      ["add", 7, 5, 12],
+      ["sub", 9, 4, 5],
+      ["mul", 3, 4, 12],
+      ["div", 8, 2, 4],
+    ] as const) {
+      const response = await answer({ gameId, operation, factorA, factorB, chosen, elapsedMs: 0 });
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toMatchObject({ correct: true });
+    }
+  });
+
+  it("case 2: a wrong + answer applies the penalty", async () => {
+    const gameId = await mixedGameId();
+    await answer({ gameId, operation: "mul", factorA: 3, factorB: 4, chosen: 12, elapsedMs: 0 });
+    const response = await answer({
+      gameId,
+      operation: "add",
+      factorA: 7,
+      factorB: 5,
+      chosen: 13,
+      elapsedMs: 0,
+    });
+    expect(response.json()).toMatchObject({ correct: false, rightAnswer: 12, timeDelta: -5 });
+  });
+
+  it("case 3: timeout on a ÷ question counts as wrong and writes one matrix row", async () => {
+    const gameId = await mixedGameId();
+    const before = ctx.db.select().from(matrixStats).all().length;
+    const response = await answer({
+      gameId,
+      operation: "div",
+      factorA: 8,
+      factorB: 2,
+      chosen: null,
+      elapsedMs: 15000,
+    });
+    expect(response.json()).toMatchObject({ correct: false, rightAnswer: 4 });
+    expect(ctx.db.select().from(matrixStats).all()).toHaveLength(before + 1);
+  });
+});

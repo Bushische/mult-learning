@@ -1,4 +1,9 @@
-import { type AnswerResponse, answerRequestSchema, answerResponseSchema } from "@mult/shared";
+import {
+  type AnswerResponse,
+  type Operation,
+  answerRequestSchema,
+  answerResponseSchema,
+} from "@mult/shared";
 import { api } from "../../lib/api-client";
 import { queryClient } from "../../lib/query-client";
 
@@ -8,6 +13,7 @@ import { queryClient } from "../../lib/query-client";
  */
 export async function submitAnswer(payload: {
   gameId: string;
+  operation?: Operation;
   factorA: number;
   factorB: number;
   chosen: number | null;
