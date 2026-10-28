@@ -50,7 +50,6 @@ export function UserStatsPage() {
   }
 
   const assignedGames = (games ?? []).filter((game) => user.games.includes(game.id));
-  const gamesById = new Map((games ?? []).map((game) => [game.id, game]));
   const summary = stats?.last7Days;
   const days = perGame?.days ?? [];
   const todayEntry = days[days.length - 1];

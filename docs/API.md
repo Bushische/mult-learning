@@ -61,9 +61,10 @@
   start to the tap, clamped server-side to `[0, questionSeconds·1000]`. Server-side only:
   1. Game must exist and be assigned to the caller (403 FORBIDDEN otherwise, 404 if no such game).
   2. `correct = chosen !== null && chosen === factorA * factorB`.
-  3. `timeDelta = correct ? +computeRewardSeconds(baseTimeReward, questionSeconds, elapsedMs)
-     : -timePenalty` — full reward inside the 3 s grace period, then a linear shrink to +0
-     at the end of the question;
+  3. `timeDelta = correct ? +computeRewardSeconds(baseTimeReward, questionSeconds, elapsedMs, timePenalty)
+     : -timePenalty` — full reward inside the 3 s grace period, then a linear shrink down to a
+     floor of `min(timePenalty, baseTimeReward)`: a correct answer always pays at least what a
+     mistake would cost;
      the bank is **per day**: on the first answer of a new UTC day it restarts at 0
      (`users.bank_date`), then `timeBank = clamp(startOfDay + timeDelta, 0, maxDailyTime)`
      — never negative, never above that day's cap

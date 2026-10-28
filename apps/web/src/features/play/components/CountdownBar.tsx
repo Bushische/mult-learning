@@ -6,30 +6,35 @@ interface CountdownBarProps {
   total: number;
   baseTimeReward: number;
   questionSeconds: number;
+  timePenalty: number;
 }
 
 /**
  * The shrinking countdown bar (top HUD) with the decaying earning on top:
- * `min +0:00` on the left, `max +<base>` on the right and the current earning
- * riding the bar from right (start) to left (timeout).
+ * `min +<floor>` on the left (the penalty floor — a correct answer never pays
+ * less), `max +<base>` on the right and the current earning riding the bar
+ * from right (start) to left (timeout).
  */
 export function CountdownBar({
   remaining,
   total,
   baseTimeReward,
   questionSeconds,
+  timePenalty,
 }: CountdownBarProps) {
   const share = total === 0 ? 0 : Math.max(0, Math.min(1, remaining / total));
   const elapsed = Math.max(0, total - remaining);
-  const max = computeRewardSeconds({ baseTimeReward, questionSeconds, elapsedMs: 0 });
-  const current = computeRewardSeconds({ baseTimeReward, questionSeconds, elapsedMs: elapsed });
+  const rewardInput = { baseTimeReward, questionSeconds, timePenalty };
+  const max = computeRewardSeconds({ ...rewardInput, elapsedMs: 0 });
+  const current = computeRewardSeconds({ ...rewardInput, elapsedMs: elapsed });
+  const min = computeRewardSeconds({ ...rewardInput, elapsedMs: total });
   const position = max === 0 ? 0 : Math.max(0, Math.min(1, current / max));
 
   return (
     <div>
       <div className="mb-1 flex items-center justify-between text-xs font-semibold">
         <span className="text-slate-500" data-testid="earning-min">
-          min +{formatDuration(0)}
+          min +{formatDuration(min)}
         </span>
         <span className="text-emerald-700" data-testid="earning-max">
           max +{formatDuration(max)}
@@ -45,7 +50,7 @@ export function CountdownBar({
         aria-valuemax={100}
         aria-label={`Reward: current +${formatDuration(current)}, max +${formatDuration(
           max,
-        )}, min +${formatDuration(0)}`}
+        )}, min +${formatDuration(min)}`}
       >
         <div
           className={`h-full ${share > 0.3 ? "bg-emerald-500" : "bg-red-500"}`}

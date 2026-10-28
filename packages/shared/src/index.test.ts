@@ -61,7 +61,7 @@ describe("T1 — shared contracts", () => {
 });
 
 describe("T23 — time-decayed reward helper", () => {
-  const base = { baseTimeReward: 10, questionSeconds: 15 };
+  const base = { baseTimeReward: 10, questionSeconds: 15, timePenalty: 5 };
   it("case 1: full reward at 0 ms and inside the grace period", () => {
     expect(computeRewardSeconds({ ...base, elapsedMs: 0 })).toBe(10);
     expect(computeRewardSeconds({ ...base, elapsedMs: 2000 })).toBe(10);
@@ -72,10 +72,30 @@ describe("T23 — time-decayed reward helper", () => {
     expect(computeRewardSeconds({ ...base, elapsedMs: 9000 })).toBe(5);
   });
 
-  it("case 3: elapsed at/past the countdown clamps to 0, never negative", () => {
-    expect(computeRewardSeconds({ ...base, elapsedMs: 15000 })).toBe(0);
-    expect(computeRewardSeconds({ ...base, elapsedMs: 99999 })).toBe(0);
+  it("case 3: elapsed at/past the countdown clamps to the penalty floor, never negative", () => {
+    expect(computeRewardSeconds({ ...base, elapsedMs: 15000 })).toBe(5);
+    expect(computeRewardSeconds({ ...base, elapsedMs: 99999 })).toBe(5);
     expect(computeRewardSeconds({ ...base, elapsedMs: -50 })).toBe(10);
+  });
+
+  it("T41 case 1+2: the floor is the penalty, capped by the base reward", () => {
+    expect(computeRewardSeconds({ ...base, elapsedMs: 14999 })).toBe(5);
+    expect(
+      computeRewardSeconds({
+        baseTimeReward: 10,
+        questionSeconds: 15,
+        timePenalty: 0,
+        elapsedMs: 15000,
+      }),
+    ).toBe(0);
+    expect(
+      computeRewardSeconds({
+        baseTimeReward: 10,
+        questionSeconds: 15,
+        timePenalty: 12,
+        elapsedMs: 15000,
+      }),
+    ).toBe(10);
   });
 
   it("case 5: questionSeconds 4 and 61 are rejected, 5..60 accepted, default 15", () => {

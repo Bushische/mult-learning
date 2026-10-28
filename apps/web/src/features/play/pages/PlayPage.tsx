@@ -266,6 +266,7 @@ export function PlayPage({ gameId, questionSeconds }: PlayPageProps) {
             total={seconds * 1000}
             baseTimeReward={game.baseTimeReward}
             questionSeconds={game.questionSeconds}
+            timePenalty={game.timePenalty}
           />
         </div>
 

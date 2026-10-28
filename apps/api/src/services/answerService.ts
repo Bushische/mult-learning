@@ -39,6 +39,7 @@ export function submitAnswer(db: Db, userId: string, request: AnswerRequest): An
     baseTimeReward: game.baseTimeReward,
     questionSeconds: game.questionSeconds,
     elapsedMs: request.elapsedMs,
+    timePenalty: game.timePenalty,
   });
   const rawDelta = correct ? reward : -game.timePenalty;
   const date = todayUtc();

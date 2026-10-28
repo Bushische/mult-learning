@@ -202,7 +202,8 @@ describe("T23 — time-decayed reward", () => {
     expect(response.json()).toMatchObject({ correct: true, timeDelta: 5, timeBankSeconds: 5 });
   });
 
-  it("case 3: elapsed at/past the countdown pays +0 and the bank is unchanged", async () => {
+  it("case 3: elapsed at/past the countdown pays the penalty floor", async () => {
+    let bank = 0;
     for (const elapsedMs of [15000, 99999]) {
       const response = await answer({
         gameId: easyTwosId,
@@ -211,8 +212,9 @@ describe("T23 — time-decayed reward", () => {
         chosen: 6,
         elapsedMs,
       });
+      bank += 5;
       expect(response.statusCode).toBe(200);
-      expect(response.json()).toMatchObject({ correct: true, timeDelta: 0, timeBankSeconds: 0 });
+      expect(response.json()).toMatchObject({ correct: true, timeDelta: 5, timeBankSeconds: bank });
     }
   });
 
@@ -330,6 +332,36 @@ describe("T39 — per-day time bank", () => {
       payload: { gameId: easyTwosId, factorA: 2, factorB: 3, chosen: 6, elapsedMs: 0 },
     });
     expect(response.statusCode).toBe(401);
+  });
+});
+
+describe("T41 — correct answers never pay +0:00", () => {
+  function userId(): string {
+    return ctx.db.select().from(users).where(eq(users.username, "child1")).get()?.id ?? "";
+  }
+
+  it("case 3: at a full bank a slow correct answer credits +0 but counts the try", async () => {
+    const id = userId();
+    ctx.db
+      .update(users)
+      .set({ timeBankSeconds: 3600, bankDate: todayUtc() })
+      .where(eq(users.id, id))
+      .run();
+
+    const response = await ctx.app.inject({
+      method: "POST",
+      url: "/api/answers",
+      headers: { authorization: `Bearer ${token}` },
+      payload: { gameId: easyTwosId, factorA: 2, factorB: 3, chosen: 6, elapsedMs: 14900 },
+    });
+    expect(response.json()).toMatchObject({ correct: true, timeDelta: 0, timeBankSeconds: 3600 });
+
+    const daily = ctx.db
+      .select()
+      .from(dailyStats)
+      .where(and(eq(dailyStats.userId, id), eq(dailyStats.date, todayUtc())))
+      .get();
+    expect(daily).toMatchObject({ totalTries: 1, correctTries: 1, timeEarnedSeconds: 0 });
   });
 });
 

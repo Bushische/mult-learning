@@ -246,23 +246,29 @@ export interface RewardInput {
   baseTimeReward: number;
   questionSeconds: number;
   elapsedMs: number;
+  /** A correct answer never pays less than a mistake costs (T41). */
+  timePenalty: number;
 }
 
 /**
  * Time-decayed reward for a correct answer: full `baseTimeReward` while
- * `elapsedMs` is inside the grace period, then a linear shrink to 0 at the
- * end of the question. Clamped to `[0, baseTimeReward]`, never negative.
+ * `elapsedMs` is inside the grace period, then a linear shrink down to a
+ * floor of `min(timePenalty, baseTimeReward)` — a slow correct answer still
+ * pays at least what a mistake would cost. Clamped to `[floor, baseReward]`,
+ * never negative.
  */
 export function computeRewardSeconds({
   baseTimeReward,
   questionSeconds,
   elapsedMs,
+  timePenalty,
 }: RewardInput): number {
   const totalMs = questionSeconds * 1000;
   const elapsed = Math.min(Math.max(elapsedMs, 0), totalMs);
   if (elapsed <= REWARD_GRACE_MS || totalMs <= REWARD_GRACE_MS) return baseTimeReward;
+  const floor = Math.min(Math.max(timePenalty, 0), baseTimeReward);
   const reward = Math.round((baseTimeReward * (totalMs - elapsed)) / (totalMs - REWARD_GRACE_MS));
-  return Math.min(Math.max(reward, 0), baseTimeReward);
+  return Math.min(Math.max(reward, floor), baseTimeReward);
 }
 
 /* ------------------------------------------------------------------ */

@@ -112,6 +112,7 @@ function apiStub(extra: Record<string, (call: { body: unknown }) => { data?: unk
         baseTimeReward: played.baseTimeReward,
         questionSeconds: played.questionSeconds,
         elapsedMs: body.elapsedMs,
+        timePenalty: played.timePenalty,
       });
       const timeDelta = correct ? reward : -played.timePenalty;
       bank = Math.min(played.maxDailyTime, Math.max(0, bank + timeDelta));
@@ -458,7 +459,7 @@ describe("T23 — time-decayed reward", () => {
 });
 
 describe("T24 — earning progress bar", () => {
-  const bar = { total: 15000, baseTimeReward: 10, questionSeconds: 15 };
+  const bar = { total: 15000, baseTimeReward: 10, questionSeconds: 15, timePenalty: 5 };
 
   it("case 1: at remaining = total the current value equals the max at the right edge", () => {
     render(<CountdownBar remaining={15000} {...bar} />);
@@ -473,20 +474,20 @@ describe("T24 — earning progress bar", () => {
     expect(screen.getByTestId("earning-current").style.left).toBe("60%");
   });
 
-  it("case 3: at remaining = 0 the current value is +0:00 at the left edge", () => {
+  it("case 3: at remaining = 0 the current value is the penalty floor at partial position", () => {
     render(<CountdownBar remaining={0} {...bar} />);
-    expect(screen.getByTestId("earning-current")).toHaveTextContent("+0:00");
-    expect(screen.getByTestId("earning-current").style.left).toBe("0%");
+    expect(screen.getByTestId("earning-current")).toHaveTextContent("+0:05");
+    expect(screen.getByTestId("earning-current").style.left).toBe("50%");
   });
 
   it("case 4: the labels render as clock values with an accessible summary", () => {
     render(<CountdownBar remaining={7500} {...bar} />);
-    expect(screen.getByTestId("earning-min")).toHaveTextContent("min +0:00");
+    expect(screen.getByTestId("earning-min")).toHaveTextContent("min +0:05");
     expect(screen.getByTestId("earning-max")).toHaveTextContent("max +0:10");
     const label = screen.getByTestId("countdown").getAttribute("aria-label") ?? "";
     expect(label).toContain("+0:06");
     expect(label).toContain("+0:10");
-    expect(label).toContain("+0:00");
+    expect(label).toContain("+0:05");
   });
 
   it("case 5: the bar still shrinks with the countdown", () => {
@@ -858,5 +859,25 @@ describe("T32 — common shared magic rules plus per-game rules", () => {
     const candidates = matchingMagicRules(10, b, GAME.hints);
     expect(candidates.length).toBeGreaterThan(0);
     expect(candidates.some((rule) => card.textContent?.includes(rule.text))).toBe(true);
+  });
+});
+
+describe("T41 — correct answers never pay +0:00", () => {
+  it("case 4: a correct answer at the last moment pays the penalty floor", async () => {
+    bank = 0;
+    apiStub();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderApp("/play/g-easy");
+    await startQuestion();
+
+    act(() => {
+      vi.advanceTimersByTime(14_900);
+    });
+    const { a, b } = readFactors();
+    await user.click(screen.getByTestId(`answer-${a * b}`));
+
+    const feedback = await screen.findByTestId("feedback");
+    expect(feedback).toHaveTextContent("Correct!");
+    expect(screen.getByTestId("feedback-delta")).toHaveTextContent("⏰ +0:05 👍");
   });
 });
