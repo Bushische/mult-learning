@@ -23,15 +23,45 @@ export function shuffle<T>(items: T[], rng: () => number = Math.random): T[] {
 }
 
 /**
+ * Digit-swap mistakes for `+`/`−`/`÷` (e.g. 37 → 73): the classic
+ * transposed-digits slip. Single digits have no swaps.
+ */
+function digitSwaps(value: number): number[] {
+  const digits = String(value);
+  const out: number[] = [];
+  for (let i = 0; i + 1 < digits.length; i += 1) {
+    const swapped = digits.split("");
+    const left = swapped[i] as string;
+    swapped[i] = swapped[i + 1] as string;
+    swapped[i + 1] = left;
+    const candidate = Number(swapped.join(""));
+    if (candidate !== value) out.push(candidate);
+  }
+  return out;
+}
+
+/** Proximity candidates shared by every operation (`right ±1/±2/±10`). */
+function proximityCandidates(rightAnswer: number): number[] {
+  return [
+    rightAnswer - 1,
+    rightAnswer + 1,
+    rightAnswer - 2,
+    rightAnswer + 2,
+    rightAnswer - 10,
+    rightAnswer + 10,
+  ];
+}
+
+/**
  * Build the answer buttons: the correct answer plus plausible distractors.
- * Candidates come from multiplication mistakes (`a·(b±1)`, `(a±1)·b`) and from
- * proximity (`right ±1/±2/±10`, `10·a`, `10·b`), widened with further offsets
- * when the table yields too few distinct values. Deduplicated, positive, never
- * the correct answer; `variantCount − 1` distinct picks with the injected RNG.
+ * The candidate pool depends on the operation (T45) — multiplication mistakes
+ * (`a·(b±1)`, `(a±1)·b`) for `×`, proximity + digit swaps for `+`/`−`,
+ * nearby quotients + off-by-one-dividend/divisor quotients for `÷` — then
+ * the shared rules: deduplicated, positive, never the correct answer;
+ * `variantCount − 1` distinct picks with the injected RNG.
  *
  * `rightAnswer` overrides the implied `factorA * factorB` so mixed-operation
- * questions (T43) keep the correct answer among the buttons; per-operation
- * candidate pools arrive in T45.
+ * questions keep the correct answer among the buttons.
  */
 export function buildOptions(
   factorA: number,
@@ -39,22 +69,33 @@ export function buildOptions(
   variantCount: number,
   rng: () => number = Math.random,
   rightAnswer: number = factorA * factorB,
+  operation: Operation = "mul",
 ): number[] {
   const count = Math.max(2, Math.min(6, variantCount));
-  const raw = [
-    factorA * (factorB - 1),
-    factorA * (factorB + 1),
-    (factorA - 1) * factorB,
-    (factorA + 1) * factorB,
-    rightAnswer - 1,
-    rightAnswer + 1,
-    rightAnswer - 2,
-    rightAnswer + 2,
-    rightAnswer - 10,
-    rightAnswer + 10,
-    10 * factorA,
-    10 * factorB,
-  ];
+  const raw =
+    operation === "mul"
+      ? [
+          factorA * (factorB - 1),
+          factorA * (factorB + 1),
+          (factorA - 1) * factorB,
+          (factorA + 1) * factorB,
+          ...proximityCandidates(rightAnswer),
+          10 * factorA,
+          10 * factorB,
+        ]
+      : operation === "div"
+        ? [
+            rightAnswer - 1,
+            rightAnswer + 1,
+            rightAnswer - 2,
+            rightAnswer + 2,
+            ...digitSwaps(rightAnswer),
+            (factorA + 1) % factorB === 0 ? (factorA + 1) / factorB : -1,
+            factorA - 1 > 0 && (factorA - 1) % factorB === 0 ? (factorA - 1) / factorB : -1,
+            factorA % (factorB + 1) === 0 ? factorA / (factorB + 1) : -1,
+            factorB - 1 >= 1 && factorA % (factorB - 1) === 0 ? factorA / (factorB - 1) : -1,
+          ]
+        : [...proximityCandidates(rightAnswer), ...digitSwaps(rightAnswer)];
   const seen = new Set<number>();
   const pool: number[] = [];
   for (const candidate of raw) {
@@ -173,6 +214,6 @@ export function generateQuestion(game: Game, rng: () => number = Math.random): Q
     factorA,
     factorB,
     rightAnswer,
-    options: buildOptions(factorA, factorB, game.variantCount, rng, rightAnswer),
+    options: buildOptions(factorA, factorB, game.variantCount, rng, rightAnswer, operation),
   };
 }

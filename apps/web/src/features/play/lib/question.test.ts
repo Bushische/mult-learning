@@ -143,3 +143,59 @@ describe("T43 — mixed-operation questions", () => {
     }
   });
 });
+
+describe("T45 — distractor options per operation", () => {
+  it("case 1: 15 + 7 offers 22 once plus neighbours from {20,21,23,24,12,32}", () => {
+    const allowed = new Set([20, 21, 23, 24, 12, 32]);
+    for (let seed = 0; seed < 20; seed += 1) {
+      const options = buildOptions(15, 7, 3, createSeededRng(seed), 22, "add");
+      expect(options).toHaveLength(3);
+      expect(options.filter((value) => value === 22)).toHaveLength(1);
+      for (const value of options) {
+        expect(value === 22 || allowed.has(value)).toBe(true);
+      }
+    }
+  });
+
+  it("case 2: 20 − 8 offers 12 once, all options non-negative and unique", () => {
+    const options = buildOptions(20, 8, 4, createSeededRng(11), 12, "sub");
+    expect(options).toHaveLength(4);
+    expect(options.filter((value) => value === 12)).toHaveLength(1);
+    expect(new Set(options).size).toBe(4);
+    for (const value of options) {
+      expect(value).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it("case 3: 20 ÷ 4 offers 5 once with small nearby distractors", () => {
+    const options = buildOptions(20, 4, 3, createSeededRng(5), 5, "div");
+    expect(options).toHaveLength(3);
+    expect(options.filter((value) => value === 5)).toHaveLength(1);
+    for (const value of options) {
+      expect(Number.isInteger(value)).toBe(true);
+      expect(value).toBeGreaterThan(0);
+      expect(value).toBeLessThanOrEqual(10);
+    }
+  });
+
+  it("case 4: exact count, unique, deterministic per seed for every operation", () => {
+    const cases = [
+      { a: 15, b: 7, right: 22, op: "add" },
+      { a: 20, b: 8, right: 12, op: "sub" },
+      { a: 3, b: 4, right: 12, op: "mul" },
+      { a: 20, b: 4, right: 5, op: "div" },
+    ] as const;
+    for (const { a, b, right, op } of cases) {
+      for (let n = 3; n <= 6; n += 1) {
+        for (let seed = 0; seed < 10; seed += 1) {
+          const first = buildOptions(a, b, n, createSeededRng(seed), right, op);
+          const second = buildOptions(a, b, n, createSeededRng(seed), right, op);
+          expect(first).toEqual(second);
+          expect(first).toHaveLength(n);
+          expect(new Set(first).size).toBe(n);
+          expect(first.filter((value) => value === right)).toHaveLength(1);
+        }
+      }
+    }
+  });
+});
