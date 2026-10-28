@@ -201,7 +201,9 @@ export function PlayPage({ gameId, questionSeconds }: PlayPageProps) {
     if (!game || !question) return null;
     if (phase !== "question" && phase !== "feedback") return null;
     const match = game.hints.find(
-      (entry) => entry.factor === question.factorA || entry.factor === question.factorB,
+      (entry) =>
+        (entry.factor === question.factorA || entry.factor === question.factorB) &&
+        (entry.operation === undefined || entry.operation === question.operation),
     );
     return match?.text ?? null;
   }, [game, question, phase]);
@@ -209,7 +211,7 @@ export function PlayPage({ gameId, questionSeconds }: PlayPageProps) {
   /** One magic rule per question: shared rules + the game's own, random pick. */
   const magicRule = useMemo(() => {
     if (!game || !question) return null;
-    return pickMagicRule(question.factorA, question.factorB, game.hints, rng);
+    return pickMagicRule(question.factorA, question.factorB, game.hints, rng, question.operation);
   }, [game, question]);
 
   if (!game) {

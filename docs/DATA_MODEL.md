@@ -36,7 +36,7 @@ General rules (fixed, stack-level):
 | time_penalty | integer NOT NULL | seconds deducted on wrong/timeout |
 | max_daily_time | integer NOT NULL, default 3600 | time bank cap (s) |
 | question_seconds | integer NOT NULL, default 15 | countdown length per question (s), 5..60 |
-| hints_json | text NOT NULL, default `"[]"` | JSON `[{ "factor": 2..20, "text": string }, ...]` — "Magic Rules" hints |
+| hints_json | text NOT NULL, default `"[]"` | JSON `[{ "factor": 0..20, "operation"?: "add/sub/mul/div", "text": string }, ...]` — "Magic Rules" hints |
 | created_at / updated_at | timestamp | epoch |
 
 ## user_game_assignments

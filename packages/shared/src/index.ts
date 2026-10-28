@@ -117,42 +117,72 @@ export function applyOp(a: number, b: number, op: Operation): number {
   }
 }
 
-/** "Magic Rules" hint for one factor. */
+/** "Magic Rules" hint for one factor, optionally scoped to one operation. */
 export const gameHintSchema = z.object({
-  factor: factorSchema,
+  factor: z.number().int().min(0).max(20),
+  operation: operationSchema.optional(),
   text: z.string().trim().min(1).max(200),
 });
 export type GameHint = z.infer<typeof gameHintSchema>;
 
-/** One shared magic rule: a factor shortcut that applies to every game. */
+/** One shared magic rule: a factor shortcut, optionally scoped to one operation. */
 export const magicRuleSchema = z.object({
-  factor: factorSchema,
+  factor: z.number().int().min(0).max(20),
+  operation: operationSchema.optional(),
   text: z.string().trim().min(1).max(200),
 });
 export type MagicRule = z.infer<typeof magicRuleSchema>;
 
 /**
- * Starter set of shared magic rules (T32). Each fires when its factor is
- * either side of the question; per-game `hints` extend this list.
+ * Starter set of shared magic rules (T32, extended per operation in T46).
+ * Each fires when its factor is either side of the question; per-game
+ * `hints` extend this list. Factor 0 rules never fire from the generator
+ * (operands are 1..20) but match structurally, e.g. `5 + 0`.
  */
 export const SHARED_MAGIC_RULES: MagicRule[] = [
-  { factor: 1, text: "Times 1 — the number stays the same." },
-  { factor: 2, text: "Times 2 — just double it: 7 × 2 = 7 + 7." },
-  { factor: 4, text: "Times 4 — double it, then double again." },
-  { factor: 5, text: "Times 5 — take times 10, then half: 7 × 5 = 70 ÷ 2." },
-  { factor: 9, text: "Times 9 — take times 10, then subtract once: 7 × 9 = 70 − 7." },
-  { factor: 10, text: "Times 10 — just add a 0 at the end!" },
+  { factor: 0, operation: "add", text: "Plus 0 — adding nothing keeps the number." },
+  { factor: 0, operation: "sub", text: "Minus 0 — taking nothing keeps the number." },
+  { factor: 0, operation: "mul", text: "Times 0 — the answer is always 0." },
+  { factor: 1, operation: "mul", text: "Times 1 — the number stays the same." },
+  { factor: 2, operation: "mul", text: "Times 2 — just double it: 7 × 2 = 7 + 7." },
+  { factor: 4, operation: "mul", text: "Times 4 — double it, then double again." },
+  {
+    factor: 5,
+    operation: "mul",
+    text: "Times 5 — take times 10, then half: 7 × 5 = 70 ÷ 2.",
+  },
+  {
+    factor: 9,
+    operation: "mul",
+    text: "Times 9 — take times 10, then subtract once: 7 × 9 = 70 − 7.",
+  },
+  { factor: 10, operation: "mul", text: "Times 10 — just add a 0 at the end!" },
+  { factor: 1, operation: "div", text: "Divide by 1 — the number stays the same." },
 ];
+
+/** Shared rule for `n ÷ n`: any number divided by itself is 1. */
+export const SELF_DIVISION_RULE_TEXT = "Same over same — any number divided by itself is 1.";
 
 /** Every rule (shared first, then the game's own) matching this question. */
 export function matchingMagicRules(
   factorA: number,
   factorB: number,
   gameHints: GameHint[] = [],
+  operation?: Operation,
 ): MagicRule[] {
-  return [...SHARED_MAGIC_RULES, ...gameHints].filter(
-    (rule) => rule.factor === factorA || rule.factor === factorB,
+  const scopeOk = (rule: { operation?: Operation }): boolean =>
+    rule.operation === undefined || operation === undefined || rule.operation === operation;
+  const shared = SHARED_MAGIC_RULES.filter(
+    (rule) => scopeOk(rule) && (rule.factor === factorA || rule.factor === factorB),
   );
+  const selfDivision: MagicRule[] =
+    operation === "div" && factorA === factorB
+      ? [{ factor: factorA, operation: "div", text: SELF_DIVISION_RULE_TEXT }]
+      : [];
+  const own = gameHints.filter(
+    (rule) => scopeOk(rule) && (rule.factor === factorA || rule.factor === factorB),
+  );
+  return [...shared, ...selfDivision, ...own];
 }
 
 /** One matching rule text, picked with the injected RNG (deterministic in tests). */
@@ -161,8 +191,9 @@ export function pickMagicRule(
   factorB: number,
   gameHints: GameHint[] = [],
   rng: () => number = Math.random,
+  operation?: Operation,
 ): string | null {
-  const matches = matchingMagicRules(factorA, factorB, gameHints);
+  const matches = matchingMagicRules(factorA, factorB, gameHints, operation);
   if (matches.length === 0) return null;
   return (matches[Math.floor(rng() * matches.length)] as MagicRule).text;
 }

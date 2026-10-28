@@ -189,3 +189,49 @@ describe("T42 — operation contract", () => {
     expect(() => gameSchema.parse({ ...validGameConfig, id: "game1", operations: [] })).toThrow();
   });
 });
+
+describe("T46 — magic rules per operation", () => {
+  it("case 1: 5 + 0 shows the shared +0 rule with no game rules", () => {
+    const matches = matchingMagicRules(5, 0, [], "add");
+    expect(matches.map((rule) => rule.text)).toEqual([
+      "Plus 0 — adding nothing keeps the number.",
+    ]);
+    expect(pickMagicRule(5, 0, [], () => 0, "add")).toBe(
+      "Plus 0 — adding nothing keeps the number.",
+    );
+  });
+
+  it("case 2: 9 ÷ 9 shows the game's own ÷ rule (plus the shared same-over-same rule)", () => {
+    const own = [{ factor: 9, operation: "div" as const, text: "Nine over nine is one" }];
+    const matches = matchingMagicRules(9, 9, own, "div");
+    expect(matches.map((rule) => rule.text)).toEqual([
+      "Same over same — any number divided by itself is 1.",
+      "Nine over nine is one",
+    ]);
+  });
+
+  it("case 3: only rules scoped to the question's operation can appear", () => {
+    const hints = [
+      { factor: 9, operation: "mul" as const, text: "mul nine trick" },
+      { factor: 9, operation: "div" as const, text: "div nine trick" },
+    ];
+    expect(matchingMagicRules(9, 3, hints, "div").map((rule) => rule.text)).toEqual([
+      "div nine trick",
+    ]);
+    const mulMatches = matchingMagicRules(9, 3, hints, "mul").map((rule) => rule.text);
+    expect(mulMatches).toContain("Times 9 — take times 10, then subtract once: 7 × 9 = 70 − 7.");
+    expect(mulMatches).toContain("mul nine trick");
+    expect(mulMatches).not.toContain("div nine trick");
+  });
+
+  it("case 4: no match means no card", () => {
+    expect(matchingMagicRules(3, 7, [], "add")).toEqual([]);
+    expect(pickMagicRule(3, 7, [], () => 0.5, "sub")).toBeNull();
+  });
+
+  it("unscoped calls keep the legacy behavior (× rules match by factor)", () => {
+    expect(matchingMagicRules(10, 4, []).map((rule) => rule.text)).toContain(
+      "Times 10 — just add a 0 at the end!",
+    );
+  });
+});

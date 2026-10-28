@@ -883,3 +883,53 @@ describe("T41 — correct answers never pay +0:00", () => {
     expect(screen.getByTestId("feedback-delta")).toHaveTextContent("⏰ +0:05 👍");
   });
 });
+
+describe("T46 — magic rules per operation", () => {
+  it("a ÷1 question shows the shared divide-by-1 rule on a correct answer", async () => {
+    const divOne: Game = {
+      ...GAME,
+      id: "g-div-one",
+      name: "Divide by One",
+      operations: ["div"],
+      rangeA: { min: 5, max: 5 },
+      rangeB: { min: 1, max: 1 },
+      hints: [],
+    };
+    bank = 0;
+    apiStub({ "GET /games": () => ({ data: [divOne] }) });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderApp("/play/g-div-one");
+    await startQuestion();
+
+    const { a, b } = readFactors();
+    expect([a, b]).toEqual([5, 1]);
+    await user.click(screen.getByTestId(`answer-${a / b}`));
+    await screen.findByTestId("feedback");
+    expect(await screen.findByTestId("magic-rule")).toHaveTextContent(
+      "Divide by 1 — the number stays the same.",
+    );
+  });
+
+  it("a 9 ÷ 3 question shows the game's own ÷ rule on a correct answer", async () => {
+    const divGame: Game = {
+      ...GAME,
+      id: "g-div-own",
+      name: "Own Div Rule",
+      operations: ["div"],
+      rangeA: { min: 9, max: 9 },
+      rangeB: { min: 3, max: 3 },
+      hints: [{ factor: 3, operation: "div", text: "Three thrice trick" }],
+    };
+    bank = 0;
+    apiStub({ "GET /games": () => ({ data: [divGame] }) });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderApp("/play/g-div-own");
+    await startQuestion();
+
+    const { a, b } = readFactors();
+    expect([a, b]).toEqual([9, 3]);
+    await user.click(screen.getByTestId(`answer-${a / b}`));
+    await screen.findByTestId("feedback");
+    expect(await screen.findByTestId("magic-rule")).toHaveTextContent("Three thrice trick");
+  });
+});

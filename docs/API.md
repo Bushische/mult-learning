@@ -51,7 +51,7 @@
     "timePenalty": 5,                               // s, wrong answer or timeout
     "maxDailyTime": 3600,                           // s, time bank cap (default 3600)
     "questionSeconds": 15,                          // s per question, 5..60 (default 15)
-    "hints": [ { "factor": 10, "text": "Just add a 0 at the end!" } ]
+    "hints": [ { "factor": 10, "text": "Just add a 0 at the end!" } ]   // optional "operation": "add|sub|mul|div" scopes a hint to one operation
   }
   ```
 
