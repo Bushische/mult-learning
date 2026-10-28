@@ -278,6 +278,7 @@ export function PlayPage({ gameId, questionSeconds }: PlayPageProps) {
           b={displayB}
           aLocked={phase !== "roll1"}
           bLocked={phase === "question" || phase === "feedback"}
+          operation={question?.operation ?? "mul"}
         />
 
         {hint ? <HintBubble text={hint} /> : null}

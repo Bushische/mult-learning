@@ -935,3 +935,73 @@ describe("T46 — magic rules per operation", () => {
     expect(await screen.findByTestId("magic-rule")).toHaveTextContent("Three thrice trick");
   });
 });
+
+describe("T49 — play HUD labeling per operation", () => {
+  function opGame(id: string, operation: "add" | "sub" | "mul" | "div"): Game {
+    return {
+      ...GAME,
+      id,
+      name: `Op ${operation}`,
+      operations: [operation],
+      rangeA: { min: 8, max: 8 },
+      rangeB: { min: 2, max: 2 },
+      hints: [],
+    };
+  }
+
+  it("case 1: one round of each operation shows its own symbol", async () => {
+    const games = [
+      { ...opGame("g-add", "add"), rangeA: { min: 7, max: 7 }, rangeB: { min: 5, max: 5 } },
+      { ...opGame("g-sub", "sub"), rangeA: { min: 9, max: 9 }, rangeB: { min: 4, max: 4 } },
+      opGame("g-mul", "mul"),
+      opGame("g-div", "div"),
+    ];
+    const expected: Record<string, string> = {
+      "g-add": "+",
+      "g-sub": "−",
+      "g-mul": "×",
+      "g-div": "÷",
+    };
+    for (const game of games) {
+      bank = 0;
+      apiStub({ "GET /games": () => ({ data: [game] }) });
+      const view = renderApp(`/play/${game.id}`);
+      await startQuestion();
+      expect(screen.getByTestId("equation-op")).toHaveTextContent(expected[game.id] as string);
+      view.unmount();
+    }
+  });
+
+  it("case 2: a wrong − answer shows the right answer with framed seconds", async () => {
+    const game = { ...opGame("g-sub", "sub"), rangeA: { min: 9, max: 9 }, rangeB: { min: 4, max: 4 } };
+    bank = 0;
+    apiStub({ "GET /games": () => ({ data: [game] }) });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderApp("/play/g-sub");
+    await startQuestion();
+
+    const { a, b } = readFactors();
+    expect([a, b]).toEqual([9, 4]);
+    const wrongButton = screen
+      .getAllByTestId(/^answer-/)
+      .find((button) => button.textContent !== String(a - b)) as HTMLElement;
+    await user.click(wrongButton);
+
+    expect(await screen.findByTestId("feedback")).toHaveTextContent("The answer was 5");
+    expect(screen.getByTestId("feedback-delta")).toHaveTextContent("⏰ −0:05 😒");
+  });
+
+  it("case 3: a timeout on a ÷ question submits chosen:null with wrong-answer feedback", async () => {
+    const game = opGame("g-div", "div");
+    bank = 0;
+    const stub = apiStub({ "GET /games": () => ({ data: [game] }) });
+    renderApp("/play/g-div");
+    await startQuestion();
+
+    await tick(16_000);
+    expect(await screen.findByTestId("feedback")).toHaveTextContent("The answer was 4");
+    const posts = stub.calls.filter((call) => call.url === "/api/answers");
+    expect(posts).toHaveLength(1);
+    expect(posts[0]?.body).toMatchObject({ chosen: null, operation: "div" });
+  });
+});
