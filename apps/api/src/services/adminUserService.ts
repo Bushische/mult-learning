@@ -141,7 +141,7 @@ export function resetUserProgress(db: Db, id: string): void {
     tx.delete(dailyStats).where(eq(dailyStats.userId, id)).run();
     tx.delete(gameDailyStats).where(eq(gameDailyStats.userId, id)).run();
     tx.update(users)
-      .set({ timeBankSeconds: 0, updatedAt: new Date() })
+      .set({ timeBankSeconds: 0, bankDate: null, updatedAt: new Date() })
       .where(eq(users.id, id))
       .run();
   });

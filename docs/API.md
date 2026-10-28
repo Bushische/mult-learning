@@ -35,7 +35,7 @@
 | POST /auth/login | public | `{ "username", "pin" }` | `{ "accessToken", "user": { "id", "username", "role" } }` + Set-Cookie refresh. 401 UNAUTHORIZED on wrong username/PIN |
 | POST /auth/refresh | public | cookie | fresh `{ "accessToken", "user" }`, rotated cookie. 401 on invalid/expired |
 | POST /auth/logout | public | cookie | `{"ok": true}` + cookie cleared |
-| GET /me | user | — | `{ "id", "username", "role", "timeBankSeconds" }` |
+| GET /me | user | — | `{ "id", "username", "role", "timeBankSeconds" }` (bank of the current day — expires at midnight UTC) |
 
 ## Games (read)
 
@@ -64,7 +64,9 @@
   3. `timeDelta = correct ? +computeRewardSeconds(baseTimeReward, questionSeconds, elapsedMs)
      : -timePenalty` — full reward inside the 3 s grace period, then a linear shrink to +0
      at the end of the question;
-     `timeBank = clamp(current + timeDelta, 0, maxDailyTime)` — never negative, never above cap
+     the bank is **per day**: on the first answer of a new UTC day it restarts at 0
+     (`users.bank_date`), then `timeBank = clamp(startOfDay + timeDelta, 0, maxDailyTime)`
+     — never negative, never above that day's cap
      (surplus answers above the cap only count for stats, not for the bank).
   4. Write one `matrix_stats` row; upsert `daily_stats` (total_tries +1; correct_tries +1 when correct;
      time_earned_seconds + timeDelta when positive only) and the matching `game_daily_stats`

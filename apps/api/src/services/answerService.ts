@@ -41,18 +41,20 @@ export function submitAnswer(db: Db, userId: string, request: AnswerRequest): An
     elapsedMs: request.elapsedMs,
   });
   const rawDelta = correct ? reward : -game.timePenalty;
+  const date = todayUtc();
 
   return db.transaction((tx) => {
     const user = tx.select().from(users).where(eq(users.id, userId)).get();
     if (!user) throw notFound("User not found");
 
-    const currentBank = user.timeBankSeconds;
-    const newBank = Math.min(Math.max(currentBank + rawDelta, 0), game.maxDailyTime);
+    // The bank is per day: the first answer of a new UTC day starts at 0.
+    const startingBank = user.bankDate === date ? user.timeBankSeconds : 0;
+    const newBank = Math.min(Math.max(startingBank + rawDelta, 0), game.maxDailyTime);
     // The delta that actually reached the bank (0 when the bank is at a bound).
-    const appliedDelta = newBank - currentBank;
+    const appliedDelta = newBank - startingBank;
 
     tx.update(users)
-      .set({ timeBankSeconds: newBank, updatedAt: new Date() })
+      .set({ timeBankSeconds: newBank, bankDate: date, updatedAt: new Date() })
       .where(eq(users.id, userId))
       .run();
 
@@ -66,7 +68,6 @@ export function submitAnswer(db: Db, userId: string, request: AnswerRequest): An
       })
       .run();
 
-    const date = todayUtc();
     const existing = tx
       .select()
       .from(dailyStats)

@@ -19,6 +19,7 @@ General rules (fixed, stack-level):
 | pin_hash | text | bcrypt hash of the 4-digit PIN (never store the PIN itself) |
 | role | text enum: `admin` \| `user` | admin extra via `requireAdmin` |
 | time_bank_seconds | integer, NOT NULL, default 0 | current accumulated screen time (capped per game `maxDailyTime`) |
+| bank_date | text `YYYY-MM-DD` (UTC), NULL | last day the bank was touched — a new day starts the bank at 0 (T39) |
 | created_at / updated_at | timestamp | epoch |
 
 ## games

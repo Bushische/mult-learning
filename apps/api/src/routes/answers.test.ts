@@ -114,7 +114,7 @@ describe("T6 — answer submission", () => {
     const user = ctx.db.select().from(users).where(eq(users.username, "child1")).get();
     ctx.db
       .update(users)
-      .set({ timeBankSeconds: 3600 })
+      .set({ timeBankSeconds: 3600, bankDate: todayUtc() })
       .where(eq(users.id, user?.id ?? ""))
       .run();
 
@@ -245,5 +245,90 @@ describe("T23 — time-decayed reward", () => {
       expect(response.statusCode).toBe(400);
       expect(response.json().error.code).toBe("VALIDATION_ERROR");
     }
+  });
+});
+
+describe("T39 — per-day time bank", () => {
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+  function setBank(seconds: number, date: string | null): string {
+    const id = ctx.db.select().from(users).where(eq(users.username, "child1")).get()?.id ?? "";
+    ctx.db
+      .update(users)
+      .set({ timeBankSeconds: seconds, bankDate: date })
+      .where(eq(users.id, id))
+      .run();
+    return id;
+  }
+
+  function correctAnswer() {
+    return answer({ gameId: easyTwosId, factorA: 2, factorB: 3, chosen: 6, elapsedMs: 0 });
+  }
+
+  it("case 1: yesterday's bank expires on the first answer today", async () => {
+    const id = setBank(100, yesterday);
+    ctx.db
+      .insert(dailyStats)
+      .values({
+        userId: id,
+        date: yesterday,
+        totalTries: 5,
+        correctTries: 4,
+        timeEarnedSeconds: 40,
+      })
+      .run();
+
+    const response = await correctAnswer();
+    expect(response.json()).toMatchObject({ correct: true, timeBankSeconds: 10, timeDelta: 10 });
+
+    const dates = ctx.db
+      .select()
+      .from(dailyStats)
+      .where(eq(dailyStats.userId, id))
+      .all()
+      .map((row) => row.date)
+      .sort();
+    expect(dates).toEqual([yesterday, todayUtc()].sort());
+  });
+
+  it("case 2: the cap restarts every day", async () => {
+    setBank(3600, yesterday);
+    const response = await correctAnswer();
+    expect(response.json()).toMatchObject({ correct: true, timeBankSeconds: 10, timeDelta: 10 });
+  });
+
+  it("case 3: intraday clamping is unchanged", async () => {
+    setBank(3595, todayUtc());
+    const first = await correctAnswer();
+    expect(first.json()).toMatchObject({ timeBankSeconds: 3600, timeDelta: 5 });
+    const second = await correctAnswer();
+    expect(second.json()).toMatchObject({ timeBankSeconds: 3600, timeDelta: 0 });
+  });
+
+  it("case 4: reset clears the day marker", async () => {
+    const childId = setBank(100, todayUtc());
+    const adminLogin = await ctx.app.inject({
+      method: "POST",
+      url: "/api/auth/login",
+      payload: { username: "admin", pin: "1289" },
+    });
+    const reset = await ctx.app.inject({
+      method: "POST",
+      url: `/api/admin/users/${childId}/reset`,
+      headers: { authorization: `Bearer ${adminLogin.json().accessToken as string}` },
+    });
+    expect(reset.statusCode).toBe(204);
+
+    const response = await correctAnswer();
+    expect(response.json()).toMatchObject({ correct: true, timeBankSeconds: 10, timeDelta: 10 });
+  });
+
+  it("case 5: anonymous answers are still 401", async () => {
+    const response = await ctx.app.inject({
+      method: "POST",
+      url: "/api/answers",
+      payload: { gameId: easyTwosId, factorA: 2, factorB: 3, chosen: 6, elapsedMs: 0 },
+    });
+    expect(response.statusCode).toBe(401);
   });
 });

@@ -21,6 +21,8 @@ export const users = sqliteTable("users", {
     .notNull()
     .default("user"),
   timeBankSeconds: integer("time_bank_seconds").notNull().default(0),
+  /** Last UTC day (`YYYY-MM-DD`) the bank was touched — a new day starts at 0. */
+  bankDate: text("bank_date"),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),

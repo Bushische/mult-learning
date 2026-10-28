@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `bank_date` text;
