@@ -345,3 +345,34 @@ describe("T23 — questionSeconds contract", () => {
     expect(okPatch.json()).toMatchObject({ questionSeconds: 20 });
   });
 });
+
+describe("T47 — operations in the admin games API", () => {
+  it("creates a mixed-operations game, patches its list, and rejects an empty list", async () => {
+    const created = await admin("POST", "/api/admin/games", {
+      ...validGame,
+      name: "Plus and Minus",
+      operations: ["add", "sub"],
+    });
+    expect(created.statusCode).toBe(201);
+    expect(created.json()).toMatchObject({ operations: ["add", "sub"] });
+
+    const game = created.json() as { id: string };
+    const listed = await admin("GET", "/api/admin/games");
+    expect(
+      (listed.json() as { id: string; operations: string[] }[]).find((entry) => entry.id === game.id),
+    ).toMatchObject({ operations: ["add", "sub"] });
+
+    const patched = await admin("PATCH", `/api/admin/games/${game.id}`, {
+      operations: ["add", "sub", "mul", "div"],
+    });
+    expect(patched.statusCode).toBe(200);
+    expect(patched.json()).toMatchObject({ operations: ["add", "sub", "mul", "div"] });
+
+    const empty = await admin("POST", "/api/admin/games", {
+      ...validGame,
+      name: "No Ops",
+      operations: [],
+    });
+    expect(empty.statusCode).toBe(400);
+  });
+});

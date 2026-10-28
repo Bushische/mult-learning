@@ -1,4 +1,4 @@
-import type { Game } from "@mult/shared";
+import { OPERATION_SYMBOLS, type Game } from "@mult/shared";
 
 interface GameListProps {
   games: Game[];
@@ -23,6 +23,7 @@ export function GameList({ games, onEdit, onDuplicate, onDelete }: GameListProps
           <div>
             <p className="font-bold">{game.name}</p>
             <p className="text-sm text-slate-500">
+              {game.operations.map((operation) => OPERATION_SYMBOLS[operation]).join(" ")} ·{" "}
               {game.rangeA.min}–{game.rangeA.max} × {game.rangeB.min}–{game.rangeB.max} ·{" "}
               {game.variantCount} options · +{game.baseTimeReward}s / −{game.timePenalty}s
             </p>

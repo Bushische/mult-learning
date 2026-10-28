@@ -1,4 +1,5 @@
 import { type Game, type GameConfig, type Operation, gameConfigSchema } from "@mult/shared";
+import { ALL_OPERATIONS, OPERATION_SYMBOLS } from "@mult/shared";
 import { useState } from "react";
 import { CombinationMatrix } from "./CombinationMatrix";
 import { HintsEditor } from "./HintsEditor";
@@ -79,6 +80,14 @@ export function GameStudioForm({ editing, onSubmit, onCancelEdit }: GameStudioFo
     setForm((current) => ({ ...current, ...changes }));
   };
 
+  const toggleOperation = (operation: Operation) => {
+    patch({
+      operations: form.operations.includes(operation)
+        ? form.operations.filter((item) => item !== operation)
+        : [...ALL_OPERATIONS.filter((item) => item === operation || form.operations.includes(item))],
+    });
+  };
+
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
     const config: GameConfig = {
@@ -138,6 +147,27 @@ export function GameStudioForm({ editing, onSubmit, onCancelEdit }: GameStudioFo
         />
       </label>
       {error("name")}
+
+      <fieldset className="flex flex-col gap-2">
+        <legend className="text-sm font-semibold text-slate-600">Operations</legend>
+        <span className="flex flex-wrap gap-2">
+          {ALL_OPERATIONS.map((operation) => (
+            <label
+              key={operation}
+              className="flex min-h-[44px] items-center gap-2 rounded-xl border border-slate-300 px-3 text-lg"
+            >
+              <input
+                type="checkbox"
+                aria-label={`Operation ${operation}`}
+                checked={form.operations.includes(operation)}
+                onChange={() => toggleOperation(operation)}
+              />
+              <span aria-hidden="true">{OPERATION_SYMBOLS[operation]}</span>
+            </label>
+          ))}
+        </span>
+      </fieldset>
+      {error("operations")}
 
       <div className="grid grid-cols-2 gap-3">
         <label className="flex flex-col text-sm">

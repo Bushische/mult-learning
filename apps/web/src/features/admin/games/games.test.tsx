@@ -8,6 +8,7 @@ import { api } from "../../../lib/api-client";
 import { useAuthStore } from "../../../stores/auth-store";
 import { type ApiStub, createApiStub, renderApp, resetSession } from "../../../test/harness";
 import { generateQuestion } from "../../play/lib/question";
+import { createSeededRng } from "../../play/lib/random";
 
 function makeGame(id: string, name: string, overrides: Partial<Game> = {}): Game {
   return {
@@ -347,6 +348,79 @@ describe("T23 — seconds per question", () => {
         (call) => call.method === "POST" && call.url === "/api/admin/games",
       );
       expect(post?.body).toMatchObject({ name: "Timed", questionSeconds: 20 });
+    });
+  });
+});
+
+describe("T47 — operation picker", () => {
+  it("case 1: an admin creates Plus and Minus and the child plays mixed +/− only", async () => {
+    const { state, stub } = installServer();
+    const user = userEvent.setup();
+    renderApp("/admin");
+    await openGamesTab(user);
+
+    await user.type(screen.getByLabelText("Game name"), "Plus and Minus");
+    // default is ×-only: uncheck it, check + and −
+    await user.click(screen.getByLabelText("Operation mul"));
+    await user.click(screen.getByLabelText("Operation add"));
+    await user.click(screen.getByLabelText("Operation sub"));
+    await user.click(screen.getByRole("button", { name: "Create game" }));
+
+    await waitFor(() => {
+      const post = stub.calls.find(
+        (call) => call.method === "POST" && call.url === "/api/admin/games",
+      );
+      expect(post?.body).toMatchObject({ name: "Plus and Minus", operations: ["add", "sub"] });
+    });
+    const created = state.games.find((game) => game.name === "Plus and Minus");
+    expect(created?.operations).toEqual(["add", "sub"]);
+
+    // the game list shows the operations
+    expect(await screen.findByTestId("admin-game-Plus and Minus")).toHaveTextContent("+ −");
+
+    // every generated question for this game is + or −, and both appear
+    const seen = new Set<string>();
+    for (let seed = 0; seed < 50; seed += 1) {
+      const question = generateQuestion(created as Game, createSeededRng(seed));
+      expect(["add", "sub"]).toContain(question.operation);
+      seen.add(question.operation);
+    }
+    expect(seen).toEqual(new Set(["add", "sub"]));
+  });
+
+  it("case 2: unchecking every operation shows an inline error and submits nothing", async () => {
+    const { stub } = installServer();
+    const user = userEvent.setup();
+    renderApp("/admin");
+    await openGamesTab(user);
+
+    await user.type(screen.getByLabelText("Game name"), "No Ops");
+    await user.click(screen.getByLabelText("Operation mul"));
+    await user.click(screen.getByRole("button", { name: "Create game" }));
+
+    expect(await screen.findByTestId("error-operations")).toBeInTheDocument();
+    expect(
+      stub.calls.some((call) => call.method === "POST" && call.url === "/api/admin/games"),
+    ).toBe(false);
+  });
+
+  it("case 3: an existing ×-only game opens with only × checked", async () => {
+    installServer();
+    const user = userEvent.setup();
+    renderApp("/admin");
+    await openGamesTab(user);
+
+    const row = await screen.findByTestId("admin-game-Easy Twos");
+    await user.click(within(row).getByRole("button", { name: "Edit" }));
+
+    expect(screen.getByLabelText("Operation mul")).toBeChecked();
+    expect(screen.getByLabelText("Operation add")).not.toBeChecked();
+    expect(screen.getByLabelText("Operation sub")).not.toBeChecked();
+    expect(screen.getByLabelText("Operation div")).not.toBeChecked();
+
+    await user.click(screen.getByRole("button", { name: "Save game" }));
+    await waitFor(() => {
+      expect(screen.queryByTestId("error-operations")).not.toBeInTheDocument();
     });
   });
 });
