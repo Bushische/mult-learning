@@ -43,7 +43,9 @@ describe("T7 — stats read API", () => {
     expect(response.statusCode).toBe(200);
     const cell = response
       .json()
-      .cells.find((c: { a: number; b: number }) => c.a === 2 && c.b === 5);
+      .cells.find(
+        (c: { op: string; a: number; b: number }) => c.op === "mul" && c.a === 2 && c.b === 5,
+      );
     expect(cell).toMatchObject({ tries: 5, correct: 5, accuracy: 1, color: "green" });
   });
 
@@ -54,7 +56,9 @@ describe("T7 — stats read API", () => {
     const response = await heatmap();
     const cell = response
       .json()
-      .cells.find((c: { a: number; b: number }) => c.a === 2 && c.b === 5);
+      .cells.find(
+        (c: { op: string; a: number; b: number }) => c.op === "mul" && c.a === 2 && c.b === 5,
+      );
     expect(cell).toMatchObject({ tries: 8, correct: 2, accuracy: 0.25, color: "red" });
   });
 
@@ -66,9 +70,13 @@ describe("T7 — stats read API", () => {
 
     const response = await heatmap();
     const cells = response.json().cells;
-    const green = cells.find((c: { a: number; b: number }) => c.a === 4 && c.b === 4);
+    const green = cells.find(
+      (c: { op: string; a: number; b: number }) => c.op === "mul" && c.a === 4 && c.b === 4,
+    );
     expect(green).toMatchObject({ tries: 5, correct: 4, accuracy: 0.8, color: "green" });
-    const mixed = cells.find((c: { a: number; b: number }) => c.a === 3 && c.b === 3);
+    const mixed = cells.find(
+      (c: { op: string; a: number; b: number }) => c.op === "mul" && c.a === 3 && c.b === 3,
+    );
     expect(mixed).toMatchObject({ tries: 8, correct: 5, accuracy: 0.625, color: "mixed" });
   });
 
@@ -77,7 +85,9 @@ describe("T7 — stats read API", () => {
     const response = await heatmap();
     const cell = response
       .json()
-      .cells.find((c: { a: number; b: number }) => c.a === 2 && c.b === 5);
+      .cells.find(
+        (c: { op: string; a: number; b: number }) => c.op === "mul" && c.a === 2 && c.b === 5,
+      );
     expect(cell).toMatchObject({ tries: 0, correct: 0, accuracy: null, color: "none" });
   });
 
@@ -85,7 +95,9 @@ describe("T7 — stats read API", () => {
     const response = await heatmap();
     const cells = response.json().cells;
     expect(cells.length).toBeGreaterThan(0);
-    const cell = cells.find((c: { a: number; b: number }) => c.a === 4 && c.b === 4);
+    const cell = cells.find(
+      (c: { op: string; a: number; b: number }) => c.op === "mul" && c.a === 4 && c.b === 4,
+    );
     expect(cell).toMatchObject({ tries: 0, correct: 0, accuracy: null, color: "none" });
   });
 
@@ -113,9 +125,21 @@ describe("T7 — stats read API", () => {
 
     const response = await heatmap();
     const cells = response.json().cells;
-    expect(cells.find((c: { a: number; b: number }) => c.a === 2 && c.b === 1)).toBeTruthy();
-    expect(cells.find((c: { a: number; b: number }) => c.a === 7 && c.b === 6)).toBeTruthy();
-    expect(cells.find((c: { a: number; b: number }) => c.a === 15 && c.b === 15)).toBeUndefined();
+    expect(
+      cells.find(
+        (c: { op: string; a: number; b: number }) => c.op === "mul" && c.a === 2 && c.b === 1,
+      ),
+    ).toBeTruthy();
+    expect(
+      cells.find(
+        (c: { op: string; a: number; b: number }) => c.op === "mul" && c.a === 7 && c.b === 6,
+      ),
+    ).toBeTruthy();
+    expect(
+      cells.find(
+        (c: { op: string; a: number; b: number }) => c.op === "mul" && c.a === 15 && c.b === 15,
+      ),
+    ).toBeUndefined();
   });
 
   it("case 6: GET /stats/daily mirrors the answers written today; a fresh user sees zeros", async () => {

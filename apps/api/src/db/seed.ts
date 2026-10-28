@@ -31,7 +31,7 @@ export const SEED_USERS: SeedUserSpec[] = [
   { username: "child1", pin: "2468", role: "user" },
 ];
 
-/** Two base games with default economics (+10 s / −5 s, cap 3600 s, 3 variants). */
+/** Three base games with default economics (+10 s / −5 s, cap 3600 s, 3 variants). */
 export const SEED_GAMES: SeedGameSpec[] = [
   {
     name: "Easy Twos",
@@ -50,6 +50,42 @@ export const SEED_GAMES: SeedGameSpec[] = [
     operations: ["mul"],
     rangeA: { min: 1, max: 10 },
     rangeB: { min: 1, max: 10 },
+    variantCount: 3,
+    baseTimeReward: 10,
+    questionSeconds: 15,
+    timePenalty: 5,
+    maxDailyTime: 3600,
+    hints: [],
+  },
+  {
+    name: "Plus Ones",
+    operations: ["add"],
+    rangeA: { min: 1, max: 10 },
+    rangeB: { min: 1, max: 10 },
+    variantCount: 3,
+    baseTimeReward: 10,
+    questionSeconds: 15,
+    timePenalty: 5,
+    maxDailyTime: 3600,
+    hints: [],
+  },
+  {
+    name: "Take Away",
+    operations: ["sub"],
+    rangeA: { min: 5, max: 15 },
+    rangeB: { min: 1, max: 9 },
+    variantCount: 3,
+    baseTimeReward: 10,
+    questionSeconds: 15,
+    timePenalty: 5,
+    maxDailyTime: 3600,
+    hints: [],
+  },
+  {
+    name: "Sharing",
+    operations: ["div"],
+    rangeA: { min: 2, max: 20 },
+    rangeB: { min: 2, max: 10 },
     variantCount: 3,
     baseTimeReward: 10,
     questionSeconds: 15,

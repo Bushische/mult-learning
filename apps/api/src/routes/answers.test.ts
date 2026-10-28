@@ -542,3 +542,20 @@ describe("T44 — answer checking per operation", () => {
     expect(ctx.db.select().from(matrixStats).all()).toHaveLength(before + 1);
   });
 });
+
+describe("T50 — exact-division demo game", () => {
+  it("case 3: one ÷ question in Sharing credits the correct answer", async () => {
+    const sharing = ctx.db.select().from(games).where(eq(games.name, "Sharing")).get();
+    expect(sharing).toBeTruthy();
+    const response = await answer({
+      gameId: sharing?.id ?? "",
+      operation: "div",
+      factorA: 18,
+      factorB: 3,
+      chosen: 6,
+      elapsedMs: 0,
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ correct: true, rightAnswer: 6, timeDelta: 10 });
+  });
+});

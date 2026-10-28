@@ -148,7 +148,7 @@ describe("T8 — admin users", () => {
         }`,
       },
     });
-    expect(before.json()).toHaveLength(2);
+    expect(before.json()).toHaveLength(5);
 
     const assigned = await admin("PUT", `/api/admin/users/${child?.id ?? ""}/games`, {
       gameIds: [mixed?.id ?? ""],
@@ -327,11 +327,13 @@ describe("T20 — admin child stats", () => {
     });
     // the 2-day-old matrix row is present, the 8-day-old one is gone
     const cell = body.heatmap.find(
-      (entry: { a: number; b: number }) => entry.a === 2 && entry.b === 5,
+      (entry: { op: string; a: number; b: number }) =>
+        entry.op === "mul" && entry.a === 2 && entry.b === 5,
     );
     expect(cell).toMatchObject({ tries: 1, correct: 1, accuracy: 1, color: "green" });
     const stale = body.heatmap.find(
-      (entry: { a: number; b: number }) => entry.a === 3 && entry.b === 3,
+      (entry: { op: string; a: number; b: number }) =>
+        entry.op === "mul" && entry.a === 3 && entry.b === 3,
     );
     expect(stale).toMatchObject({ tries: 0, color: "none" });
     // (20, 20) is outside the child's assigned ranges and never appears

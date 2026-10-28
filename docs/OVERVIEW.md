@@ -10,7 +10,7 @@
   and never goes below zero. Stopping or continuing is always your choice — no lockouts.
 
 ## Pedagogy built in
-- **7-day rolling heatmap:** the multiplication grid over your practice ranges, colored
+- **7-day rolling heatmap:** one grid section per operation over your practice ranges, colored
   green (mastered) / mixed / red (frequent errors) based on the **last 7 days only** —
   old errors age out as soon as you re-master a cell.
 - **Magic Rules:** passing hints teach shortcuts natively (×10 → "Just add a 0 at the end!").

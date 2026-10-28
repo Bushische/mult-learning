@@ -1,8 +1,8 @@
 # Mult Learning — Project Spec
 
 ## Vision
-A lightweight self-hosted multi-user **gamified multiplication-learning PWA**. Children earn
-**screen-time privileges** by answering multiplication questions with speed and accuracy;
+A lightweight self-hosted multi-user **gamified arithmetic-learning PWA**. Children earn
+**screen-time privileges** by answering `+ − × ÷` questions with speed and accuracy;
 parents/admins keep full control over difficulty, time economics, and progress tracking.
 Hosted on a Synology DS223j (ARM64, 1 GB RAM) via Docker, exposed through Synology
 Container Manager. Development happens on the laptop, orchestrated task-by-task with opencode;
@@ -35,7 +35,8 @@ per child and works as smooth offline shell on the home network.
 
 ### C. Dashboard (main screen)
 - **Header:** user name, time bank `45:00 available`, logout.
-- **Rolling 7-day heatmap:** grid over the game's A×B range. `green` accuracy ≥ 0.8,
+- **Rolling 7-day heatmap:** one grid section per operation (`+ − × ÷`) over the game's
+  combinations. `green` accuracy ≥ 0.8,
   `mixed` 0.5–0.8, `red` < 0.5, `gray` no data. Old errors age out after 7 days —
   recent mastery shows; errors are never permanent.
 - **Daily stats card:** tries vs. correct today, time earned today.
@@ -43,7 +44,7 @@ per child and works as smooth offline shell on the home network.
 
 ### D. Game play screen (core loop)
 1. Top HUD: shrinking countdown progress bar + live time-bank ticker.
-2. Center: `[ Num 1 ] × [ Num 2 ] = ?` — slot-machine roll. Num 1 locks almost instantly;
+2. Center: `[ Num 1 ] ⟨+ − × ÷⟩ [ Num 2 ] = ?` — slot-machine roll. Num 1 locks almost instantly;
    Num 2 decelerates slowly, giving a head start to recall before the timer starts.
 3. Bottom: N multiple-choice buttons (admin-configured 3–6) in randomized positions:
    1 correct + N−1 plausible distractors (±small offsets).
@@ -70,9 +71,10 @@ per child and works as smooth offline shell on the home network.
 - **Rolling heatmap:** performance per (a, b) cell over the last 7 days only — recent mastery
   replaces historical errors.
 - **Targeted practice:** admins restrict ranges (e.g. 2–4 × 5–8) and/or pin an exact
-  combination list per game.
+  combination list per game, and pick the operations each game mixes (`+ − × ÷`).
 - **SEED:** the first admin (username `admin`) is created by the seed script; also seeds one
-  demo child + two base games (e.g. "Easy Twos", "Mixed Table").
+  demo child + five demo games ("Easy Twos" and "Mixed Table" for ×, "Plus Ones" for +,
+  "Take Away" for −, "Sharing" for ÷).
 
 ## Auth
 - Usernames unique; 4-digit PIN (bcrypt-hashed). Role per user: `admin` | `user`.

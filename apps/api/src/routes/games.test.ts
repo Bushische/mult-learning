@@ -129,7 +129,29 @@ describe("T5 — games read API", () => {
     const body = response.json() as { name: string; operations: string[] }[];
     expect(body.length).toBeGreaterThan(0);
     for (const game of body) {
-      expect(game.operations).toEqual(["mul"]);
+      expect(game.operations.length).toBeGreaterThan(0);
+      for (const op of game.operations) {
+        expect(["add", "sub", "mul", "div"]).toContain(op);
+      }
     }
+    expect(body.find((game) => game.name === "Easy Twos")?.operations).toEqual(["mul"]);
+  });
+});
+
+describe("T50 — seeded demo games", () => {
+  it("case 2: child1 sees the new operation games with their operations", async () => {
+    const token = await tokenFor("child1", "2468");
+    const response = await ctx.app.inject({
+      method: "GET",
+      url: "/api/games",
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(response.statusCode).toBe(200);
+    const body = response.json() as { name: string; operations: string[] }[];
+    const byName = new Map(body.map((game) => [game.name, game.operations]));
+    expect(byName.get("Plus Ones")).toEqual(["add"]);
+    expect(byName.get("Take Away")).toEqual(["sub"]);
+    expect(byName.get("Sharing")).toEqual(["div"]);
+    expect(byName.get("Easy Twos")).toEqual(["mul"]);
   });
 });

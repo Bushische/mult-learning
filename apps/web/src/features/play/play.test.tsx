@@ -973,7 +973,11 @@ describe("T49 — play HUD labeling per operation", () => {
   });
 
   it("case 2: a wrong − answer shows the right answer with framed seconds", async () => {
-    const game = { ...opGame("g-sub", "sub"), rangeA: { min: 9, max: 9 }, rangeB: { min: 4, max: 4 } };
+    const game = {
+      ...opGame("g-sub", "sub"),
+      rangeA: { min: 9, max: 9 },
+      rangeB: { min: 4, max: 4 },
+    };
     bank = 0;
     apiStub({ "GET /games": () => ({ data: [game] }) });
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });

@@ -8,8 +8,8 @@
 > same commit.
 
 ## What this is
-Self-hosted gamified multiplication-learning PWA: children earn screen-time seconds by
-answering `a × b` questions (speed + accuracy), admins control difficulty, time economics,
+Self-hosted gamified arithmetic-learning PWA: children earn screen-time seconds by
+answering `+ − × ÷` questions (speed + accuracy), admins control difficulty, time economics,
 and see rolling-7-day heatmaps. For the Synology DS223j (ARM64, 1 GB RAM). Developed on the
 laptop, no CI/CD. Vision: docs/TASK.md; screens: docs/PROJECT.md.
 

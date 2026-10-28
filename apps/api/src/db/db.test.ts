@@ -128,19 +128,50 @@ describe("T3 — db layer", () => {
 
     const first = seedDatabase(db);
     expect(first.usersCreated).toBe(2);
-    expect(first.gamesCreated).toBe(2);
-    expect(first.assignmentsCreated).toBe(2);
+    expect(first.gamesCreated).toBe(5);
+    expect(first.assignmentsCreated).toBe(5);
 
     const second = seedDatabase(db);
     expect(second).toEqual({ usersCreated: 0, gamesCreated: 0, assignmentsCreated: 0 });
 
     expect(db.select().from(users).all()).toHaveLength(2);
-    expect(db.select().from(games).all()).toHaveLength(2);
-    expect(db.select().from(userGameAssignments).all()).toHaveLength(2);
+    expect(db.select().from(games).all()).toHaveLength(5);
+    expect(db.select().from(userGameAssignments).all()).toHaveLength(5);
 
     const child = db.select().from(users).where(eq(users.username, "child1")).get();
     expect(child?.role).toBe("user");
     const admin = db.select().from(users).where(eq(users.username, "admin")).get();
     expect(admin?.role).toBe("admin");
+  });
+
+  it("T50 case 1: the new demo games exist once each with their operations, assigned to child1", () => {
+    const handle = memoryDb();
+    const db = handle.db;
+
+    seedDatabase(db);
+    seedDatabase(db);
+
+    const rows = db.select().from(games).all();
+    expect(rows.filter((row) => row.name === "Plus Ones")).toHaveLength(1);
+    expect(rows.filter((row) => row.name === "Take Away")).toHaveLength(1);
+    expect(rows.filter((row) => row.name === "Sharing")).toHaveLength(1);
+
+    expect(
+      JSON.parse(rows.find((row) => row.name === "Plus Ones")?.operationsJson ?? "[]"),
+    ).toEqual(["add"]);
+    expect(
+      JSON.parse(rows.find((row) => row.name === "Take Away")?.operationsJson ?? "[]"),
+    ).toEqual(["sub"]);
+    expect(JSON.parse(rows.find((row) => row.name === "Sharing")?.operationsJson ?? "[]")).toEqual([
+      "div",
+    ]);
+
+    const child = db.select().from(users).where(eq(users.username, "child1")).get();
+    const assigned = db
+      .select()
+      .from(userGameAssignments)
+      .where(eq(userGameAssignments.userId, child?.id ?? ""))
+      .all();
+    expect(assigned).toHaveLength(5);
   });
 });
