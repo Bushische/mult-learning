@@ -27,6 +27,7 @@ General rules (fixed, stack-level):
 |---|---|---|
 | id | text PK | cuid2 |
 | name | text NOT NULL | e.g. "Easy Twos" |
+| operations_json | text NOT NULL, default `'["mul"]'` | JSON `["add","sub","mul","div"]` (min 1); legacy rows read as `["mul"]` |
 | range_a_min / range_a_max | integer NOT NULL | factor A range, 1..20, min ≤ max |
 | range_b_min / range_b_max | integer NOT NULL | factor B range, 1..20, min ≤ max |
 | allowed_combinations_json | text NULL | JSON `[[a,b],...]`; NULL = every combination inside the ranges |

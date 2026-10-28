@@ -13,6 +13,7 @@ function makeGame(id: string, name: string, overrides: Partial<Game> = {}): Game
   return {
     id,
     name,
+    operations: ["mul"],
     rangeA: { min: 2, max: 4 },
     rangeB: { min: 1, max: 4 },
     allowedCombinations: null,

@@ -43,6 +43,7 @@
   ```json
   {
     "id": "<cuid>", "name": "Easy Twos",
+    "operations": ["mul"],                          // subset of add|sub|mul|div, min 1 (default ["mul"])
     "rangeA": { "min": 2, "max": 4 }, "rangeB": { "min": 5, "max": 8 },
     "allowedCombinations": [[2,5],[2,6]] | null,   // null = every combination in the ranges
     "variantCount": 3,                              // 3..6 answer buttons
@@ -56,11 +57,11 @@
 
 ## Answers (the core loop write path)
 
-- **POST /answers** (auth) — body `{ "gameId": "<cuid>", "factorA": int, "factorB": int, "chosen": int | null, "elapsedMs": int }`
+- **POST /answers** (auth) — body `{ "gameId": "<cuid>", "operation": "add|sub|mul|div" (default `"mul"`), "factorA": int, "factorB": int, "chosen": int | null, "elapsedMs": int }`
   (`null` = timeout). `elapsedMs` (required, ≥ 0) is the milliseconds from the countdown
   start to the tap, clamped server-side to `[0, questionSeconds·1000]`. Server-side only:
   1. Game must exist and be assigned to the caller (403 FORBIDDEN otherwise, 404 if no such game).
-  2. `correct = chosen !== null && chosen === factorA * factorB`.
+  2. `correct = chosen !== null && chosen === applyOp(factorA, factorB, operation)`.
   3. `timeDelta = correct ? +computeRewardSeconds(baseTimeReward, questionSeconds, elapsedMs, timePenalty)
      : -timePenalty` — full reward inside the 3 s grace period, then a linear shrink down to a
      floor of `min(timePenalty, baseTimeReward)`: a correct answer always pays at least what a

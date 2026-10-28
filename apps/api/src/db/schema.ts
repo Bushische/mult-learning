@@ -34,6 +34,8 @@ export const users = sqliteTable("users", {
 export const games = sqliteTable("games", {
   id: text("id").primaryKey().$defaultFn(createId),
   name: text("name").notNull(),
+  /** JSON array of operations mixed by this game (default `["mul"]` for legacy rows). */
+  operationsJson: text("operations_json").notNull().default('["mul"]'),
   rangeAMin: integer("range_a_min").notNull(),
   rangeAMax: integer("range_a_max").notNull(),
   rangeBMin: integer("range_b_min").notNull(),

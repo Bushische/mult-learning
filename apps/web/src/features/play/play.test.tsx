@@ -15,6 +15,7 @@ import { createSeededRng, setRng } from "./lib/random";
 const GAME: Game = {
   id: "g-easy",
   name: "Easy Twos",
+  operations: ["mul"],
   rangeA: { min: 2, max: 4 },
   rangeB: { min: 1, max: 4 },
   allowedCombinations: null,

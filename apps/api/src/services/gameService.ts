@@ -18,6 +18,7 @@ export function toGameDto(row: GameRow): Game {
   return gameSchema.parse({
     id: row.id,
     name: row.name,
+    operations: parseJsonArray<string>(row.operationsJson) ?? ["mul"],
     rangeA: { min: row.rangeAMin, max: row.rangeAMax },
     rangeB: { min: row.rangeBMin, max: row.rangeBMax },
     allowedCombinations: parseJsonArray<[number, number]>(row.allowedCombinationsJson),

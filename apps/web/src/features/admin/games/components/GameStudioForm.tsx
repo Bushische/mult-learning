@@ -1,4 +1,4 @@
-import { type Game, type GameConfig, gameConfigSchema } from "@mult/shared";
+import { type Game, type GameConfig, type Operation, gameConfigSchema } from "@mult/shared";
 import { useState } from "react";
 import { CombinationMatrix } from "./CombinationMatrix";
 import { HintsEditor } from "./HintsEditor";
@@ -12,6 +12,7 @@ interface GameStudioFormProps {
 
 interface FormState {
   name: string;
+  operations: Operation[];
   rangeAMin: number;
   rangeAMax: number;
   rangeBMin: number;
@@ -28,6 +29,7 @@ interface FormState {
 function emptyForm(): FormState {
   return {
     name: "",
+    operations: ["mul"],
     rangeAMin: 1,
     rangeAMax: 10,
     rangeBMin: 1,
@@ -45,6 +47,7 @@ function emptyForm(): FormState {
 function formOf(game: Game): FormState {
   return {
     name: game.name,
+    operations: [...game.operations],
     rangeAMin: game.rangeA.min,
     rangeAMax: game.rangeA.max,
     rangeBMin: game.rangeB.min,
@@ -80,6 +83,7 @@ export function GameStudioForm({ editing, onSubmit, onCancelEdit }: GameStudioFo
     event.preventDefault();
     const config: GameConfig = {
       name: form.name,
+      operations: form.operations,
       rangeA: { min: form.rangeAMin, max: form.rangeAMax },
       rangeB: { min: form.rangeBMin, max: form.rangeBMax },
       allowedCombinations: form.allowedCombinations.length > 0 ? form.allowedCombinations : null,

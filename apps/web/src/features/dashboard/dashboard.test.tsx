@@ -11,6 +11,7 @@ const GAMES = [
   {
     id: "g-easy",
     name: "Easy Twos",
+    operations: ["mul"],
     rangeA: { min: 2, max: 4 },
     rangeB: { min: 1, max: 4 },
     allowedCombinations: null,
@@ -24,6 +25,7 @@ const GAMES = [
   {
     id: "g-mixed",
     name: "Mixed Table",
+    operations: ["mul"],
     rangeA: { min: 1, max: 10 },
     rangeB: { min: 1, max: 10 },
     allowedCombinations: null,

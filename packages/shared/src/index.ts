@@ -88,6 +88,35 @@ export type FactorRange = z.infer<typeof factorRangeSchema>;
 export const combinationSchema = z.tuple([factorSchema, factorSchema]);
 export type Combination = z.infer<typeof combinationSchema>;
 
+/** Arithmetic operation used by a question (`+ − × ÷`). */
+export const operationSchema = z.enum(["add", "sub", "mul", "div"]);
+export type Operation = z.infer<typeof operationSchema>;
+
+/** Display symbol per operation. */
+export const OPERATION_SYMBOLS: Record<Operation, string> = {
+  add: "+",
+  sub: "−",
+  mul: "×",
+  div: "÷",
+};
+
+/** List of all operations (stable order for the studio picker). */
+export const ALL_OPERATIONS: Operation[] = ["add", "sub", "mul", "div"];
+
+/** Apply an operation to two operands (division assumes exact divisions). */
+export function applyOp(a: number, b: number, op: Operation): number {
+  switch (op) {
+    case "add":
+      return a + b;
+    case "sub":
+      return a - b;
+    case "mul":
+      return a * b;
+    case "div":
+      return b === 0 ? 0 : a / b;
+  }
+}
+
 /** "Magic Rules" hint for one factor. */
 export const gameHintSchema = z.object({
   factor: factorSchema,
@@ -142,6 +171,8 @@ export function pickMagicRule(
 export const gameSchema = z.object({
   id: idSchema,
   name: z.string().trim().min(1).max(64),
+  /** Operations mixed by this game (at least one; the server fills `["mul"]` for legacy rows). */
+  operations: z.array(operationSchema).min(1),
   rangeA: factorRangeSchema,
   rangeB: factorRangeSchema,
   allowedCombinations: z.array(combinationSchema).nullable(),
@@ -158,6 +189,7 @@ export type Game = z.infer<typeof gameSchema>;
 /** Game configuration sent by admins (no id). */
 export const gameConfigSchema = z.object({
   name: z.string().trim().min(1).max(64),
+  operations: z.array(operationSchema).min(1).default(["mul"]),
   rangeA: factorRangeSchema,
   rangeB: factorRangeSchema,
   allowedCombinations: z.array(combinationSchema).nullable(),
@@ -174,6 +206,7 @@ export type GameConfig = z.infer<typeof gameConfigSchema>;
 export const gamePatchSchema = z
   .object({
     name: gameConfigSchema.shape.name.optional(),
+    operations: z.array(operationSchema).min(1).optional(),
     rangeA: factorRangeSchema.optional(),
     rangeB: factorRangeSchema.optional(),
     allowedCombinations: z.array(combinationSchema).nullable().optional(),
@@ -222,6 +255,7 @@ export type LogoutResponse = z.infer<typeof logoutResponseSchema>;
 
 export const answerRequestSchema = z.object({
   gameId: idSchema,
+  operation: operationSchema.default("mul"),
   factorA: factorSchema,
   factorB: factorSchema,
   /** `null` = the child ran out of time. */

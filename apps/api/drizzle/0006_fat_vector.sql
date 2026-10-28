@@ -1,0 +1,1 @@
+ALTER TABLE `games` ADD `operations_json` text DEFAULT '["mul"]' NOT NULL;

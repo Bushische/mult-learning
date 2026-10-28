@@ -14,6 +14,7 @@ export interface SeedUserSpec {
 
 export interface SeedGameSpec {
   name: string;
+  operations?: ("add" | "sub" | "mul" | "div")[];
   rangeA: { min: number; max: number };
   rangeB: { min: number; max: number };
   variantCount: number;
@@ -34,6 +35,7 @@ export const SEED_USERS: SeedUserSpec[] = [
 export const SEED_GAMES: SeedGameSpec[] = [
   {
     name: "Easy Twos",
+    operations: ["mul"],
     rangeA: { min: 2, max: 4 },
     rangeB: { min: 1, max: 4 },
     variantCount: 3,
@@ -45,6 +47,7 @@ export const SEED_GAMES: SeedGameSpec[] = [
   },
   {
     name: "Mixed Table",
+    operations: ["mul"],
     rangeA: { min: 1, max: 10 },
     rangeB: { min: 1, max: 10 },
     variantCount: 3,
@@ -104,6 +107,7 @@ export function seedDatabase(db: Db): SeedResult {
       .insert(games)
       .values({
         name: spec.name,
+        operationsJson: JSON.stringify(spec.operations ?? ["mul"]),
         rangeAMin: spec.rangeA.min,
         rangeAMax: spec.rangeA.max,
         rangeBMin: spec.rangeB.min,

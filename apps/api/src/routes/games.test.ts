@@ -71,6 +71,7 @@ describe("T5 — games read API", () => {
     expect(body[0]).toEqual({
       id: game.id,
       name: "Only Mine",
+      operations: ["mul"],
       rangeA: { min: 2, max: 4 },
       rangeB: { min: 5, max: 8 },
       allowedCombinations: null,
@@ -115,5 +116,20 @@ describe("T5 — games read API", () => {
     }
     const row = ctx.db.select().from(games).where(eq(games.name, "Easy Twos")).get();
     expect(row?.allowedCombinationsJson).toBeNull();
+  });
+
+  it("T42 case 3: every game serializes its operations list (legacy rows read as mul)", async () => {
+    const token = await tokenFor("child1", "2468");
+    const response = await ctx.app.inject({
+      method: "GET",
+      url: "/api/games",
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(response.statusCode).toBe(200);
+    const body = response.json() as { name: string; operations: string[] }[];
+    expect(body.length).toBeGreaterThan(0);
+    for (const game of body) {
+      expect(game.operations).toEqual(["mul"]);
+    }
   });
 });

@@ -23,6 +23,7 @@ export function createGame(db: Db, config: GameConfig): Game {
     .insert(games)
     .values({
       name: config.name,
+      operationsJson: JSON.stringify(config.operations),
       rangeAMin: config.rangeA.min,
       rangeAMax: config.rangeA.max,
       rangeBMin: config.rangeB.min,
@@ -50,6 +51,7 @@ export function updateGame(db: Db, id: string, patch: GamePatch): Game {
   const updates: Partial<typeof games.$inferInsert> = { updatedAt: new Date() };
 
   if (patch.name !== undefined) updates.name = patch.name;
+  if (patch.operations !== undefined) updates.operationsJson = JSON.stringify(patch.operations);
   if (patch.rangeA !== undefined) {
     updates.rangeAMin = patch.rangeA.min;
     updates.rangeAMax = patch.rangeA.max;

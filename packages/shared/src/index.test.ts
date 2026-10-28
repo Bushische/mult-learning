@@ -3,15 +3,19 @@ import {
   type GameConfig,
   REWARD_GRACE_MS,
   answerRequestSchema,
+  applyOp,
   computeRewardSeconds,
   gameConfigSchema,
+  gameSchema,
   heatmapCellSchema,
   matchingMagicRules,
+  operationSchema,
   pickMagicRule,
 } from "./index";
 
 const validGameConfig: GameConfig = {
   name: "Easy Twos",
+  operations: ["mul"],
   rangeA: { min: 2, max: 4 },
   rangeB: { min: 5, max: 8 },
   allowedCombinations: null,
@@ -44,8 +48,16 @@ describe("T1 — shared contracts", () => {
 
   it("case 3: answer request rejects non-integer chosen and missing gameId, accepts null chosen", () => {
     const base = { gameId: "abc123", factorA: 2, factorB: 3, elapsedMs: 0 };
-    expect(answerRequestSchema.parse({ ...base, chosen: 6 })).toEqual({ ...base, chosen: 6 });
-    expect(answerRequestSchema.parse({ ...base, chosen: null })).toEqual({ ...base, chosen: null });
+    expect(answerRequestSchema.parse({ ...base, chosen: 6 })).toEqual({
+      ...base,
+      chosen: 6,
+      operation: "mul",
+    });
+    expect(answerRequestSchema.parse({ ...base, chosen: null })).toEqual({
+      ...base,
+      chosen: null,
+      operation: "mul",
+    });
     expect(() => answerRequestSchema.parse({ ...base, chosen: 6.5 })).toThrow();
     expect(() => answerRequestSchema.parse({ factorA: 2, factorB: 3, chosen: 6 })).toThrow();
   });
@@ -153,5 +165,27 @@ describe("T32 — shared magic rules", () => {
         "Ten is great",
       ]).toContain(text);
     }
+  });
+});
+
+describe("T42 — operation contract", () => {
+  it("case 1: a game with operations [add, mul] parses; [] and unknown ops are rejected", () => {
+    expect(
+      gameConfigSchema.parse({ ...validGameConfig, operations: ["add", "mul"] }).operations,
+    ).toEqual(["add", "mul"]);
+    expect(() => gameConfigSchema.parse({ ...validGameConfig, operations: [] })).toThrow();
+    expect(() => gameConfigSchema.parse({ ...validGameConfig, operations: ["pow"] })).toThrow();
+    expect(operationSchema.parse("div")).toBe("div");
+    expect(() => operationSchema.parse("pow")).toThrow();
+    expect(applyOp(7, 5, "add")).toBe(12);
+    expect(applyOp(9, 4, "sub")).toBe(5);
+    expect(applyOp(3, 4, "mul")).toBe(12);
+    expect(applyOp(8, 2, "div")).toBe(4);
+  });
+
+  it("operations default to [mul] when omitted (legacy games)", () => {
+    const { operations: _omitted, ...without } = validGameConfig;
+    expect(gameConfigSchema.parse(without).operations).toEqual(["mul"]);
+    expect(() => gameSchema.parse({ ...validGameConfig, id: "game1", operations: [] })).toThrow();
   });
 });

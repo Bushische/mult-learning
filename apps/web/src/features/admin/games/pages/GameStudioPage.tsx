@@ -28,6 +28,7 @@ export function GameStudioPage() {
   const duplicate = (game: Game) => {
     void createGame({
       name: `copy of ${game.name}`,
+      operations: game.operations,
       rangeA: game.rangeA,
       rangeB: game.rangeB,
       allowedCombinations: game.allowedCombinations,
