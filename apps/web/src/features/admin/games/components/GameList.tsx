@@ -1,4 +1,4 @@
-import { OPERATION_SYMBOLS, type Game } from "@mult/shared";
+import { type Game, OPERATION_SYMBOLS } from "@mult/shared";
 
 interface GameListProps {
   games: Game[];

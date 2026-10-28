@@ -295,7 +295,9 @@ describe("T12 — play screen", () => {
   it("case 8: answering invalidates the dashboard caches (heatmap + daily refetch)", async () => {
     const stub = apiStub({
       "GET /stats/heatmap": () => ({
-        data: { cells: [{ a: 2, b: 5, tries: 1, correct: 1, accuracy: 1, color: "green" }] },
+        data: {
+          cells: [{ op: "mul", a: 2, b: 5, tries: 1, correct: 1, accuracy: 1, color: "green" }],
+        },
       }),
       "GET /stats/daily": () => ({
         data: {

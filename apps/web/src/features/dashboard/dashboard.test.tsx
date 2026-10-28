@@ -96,8 +96,8 @@ describe("T11 — dashboard", () => {
       "GET /stats/heatmap": () => ({
         data: {
           cells: [
-            { a: 2, b: 5, tries: 6, correct: 2, accuracy: 0.33, color },
-            { a: 2, b: 6, tries: 0, correct: 0, accuracy: null, color: "none" },
+            { op: "mul", a: 2, b: 5, tries: 6, correct: 2, accuracy: 0.33, color },
+            { op: "mul", a: 2, b: 6, tries: 0, correct: 0, accuracy: null, color: "none" },
           ],
         },
       }),
@@ -115,14 +115,14 @@ describe("T11 — dashboard", () => {
     });
     renderApp("/");
 
-    const cell = await screen.findByTestId("cell-2-5");
+    const cell = await screen.findByTestId("cell-mul-2-5");
     expect(cell).toHaveAttribute("data-color", "red");
 
     color = "green";
     await queryClient.invalidateQueries({ queryKey: ["heatmap"] });
 
     await waitFor(() => {
-      expect(screen.getByTestId("cell-2-5")).toHaveAttribute("data-color", "green");
+      expect(screen.getByTestId("cell-mul-2-5")).toHaveAttribute("data-color", "green");
     });
   });
 
@@ -133,7 +133,7 @@ describe("T11 — dashboard", () => {
       }),
       "GET /stats/heatmap": () => ({
         data: {
-          cells: [{ a: 2, b: 6, tries: 0, correct: 0, accuracy: null, color: "none" }],
+          cells: [{ op: "mul", a: 2, b: 6, tries: 0, correct: 0, accuracy: null, color: "none" }],
         },
       }),
       "GET /stats/daily": () => ({
@@ -150,7 +150,7 @@ describe("T11 — dashboard", () => {
     });
     renderApp("/");
 
-    const cell = await screen.findByTestId("cell-2-6");
+    const cell = await screen.findByTestId("cell-mul-2-6");
     expect(cell).toHaveAttribute("data-color", "none");
     expect(cell.className).toContain("bg-slate-200");
     expect(cell).toHaveAttribute("aria-label", expect.stringContaining("no tries"));
@@ -321,7 +321,7 @@ describe("T30 — child home redesign", () => {
       }),
       "GET /stats/heatmap": () => ({
         data: {
-          cells: [{ a: 2, b: 5, tries: 1, correct: 1, accuracy: 1, color: "green" }],
+          cells: [{ op: "mul", a: 2, b: 5, tries: 1, correct: 1, accuracy: 1, color: "green" }],
         },
       }),
       "GET /stats/daily": () => ({
@@ -639,5 +639,80 @@ describe("T36 — per-game cards show correct / wrong / today total", () => {
       state.earned = 20;
     }
     expect(screen.getByTestId("game-total-g-easy")).toHaveTextContent("Today: +0:25 (3/4)");
+  });
+});
+
+describe("T48 — heatmap sections per operation", () => {
+  it("case 3: played-only-+ shows data in + and all-neutral in ×", async () => {
+    const mixedGames = [
+      {
+        id: "g-plus",
+        name: "Plus Ones",
+        operations: ["add"],
+        rangeA: { min: 1, max: 2 },
+        rangeB: { min: 1, max: 2 },
+        allowedCombinations: null,
+        variantCount: 3,
+        baseTimeReward: 10,
+        timePenalty: 5,
+        maxDailyTime: 3600,
+        questionSeconds: 15,
+        hints: [],
+      },
+      {
+        id: "g-times",
+        name: "Times Ones",
+        operations: ["mul"],
+        rangeA: { min: 1, max: 2 },
+        rangeB: { min: 1, max: 2 },
+        allowedCombinations: null,
+        variantCount: 3,
+        baseTimeReward: 10,
+        timePenalty: 5,
+        maxDailyTime: 3600,
+        questionSeconds: 15,
+        hints: [],
+      },
+    ];
+    createApiStub({
+      "GET /me": () => ({
+        data: { id: "u-child", username: "child1", role: "user", timeBankSeconds: 45 },
+      }),
+      "GET /stats/heatmap": () => ({
+        data: {
+          cells: [
+            { op: "add", a: 1, b: 1, tries: 4, correct: 3, accuracy: 0.75, color: "mixed" },
+            { op: "add", a: 1, b: 2, tries: 0, correct: 0, accuracy: null, color: "none" },
+            { op: "add", a: 2, b: 1, tries: 0, correct: 0, accuracy: null, color: "none" },
+            { op: "add", a: 2, b: 2, tries: 0, correct: 0, accuracy: null, color: "none" },
+            { op: "mul", a: 1, b: 1, tries: 0, correct: 0, accuracy: null, color: "none" },
+            { op: "mul", a: 1, b: 2, tries: 0, correct: 0, accuracy: null, color: "none" },
+            { op: "mul", a: 2, b: 1, tries: 0, correct: 0, accuracy: null, color: "none" },
+            { op: "mul", a: 2, b: 2, tries: 0, correct: 0, accuracy: null, color: "none" },
+          ],
+        },
+      }),
+      "GET /stats/daily": () => ({
+        data: {
+          date: "2026-10-22",
+          totalTries: 4,
+          correctTries: 3,
+          timeEarnedSeconds: 30,
+          timeLostSeconds: 0,
+          timeBankSeconds: 45,
+        },
+      }),
+      "GET /games": () => ({ data: mixedGames }),
+      "GET /stats/per-game": () => ({
+        data: { user: { id: "u-child", username: "child1", timeBankSeconds: 45 }, days: [] },
+      }),
+    });
+    renderApp("/");
+
+    const plus = await screen.findByTestId("heatmap-section-add");
+    expect(within(plus).getByTestId("cell-add-1-1")).toHaveAttribute("data-color", "mixed");
+    const times = await screen.findByTestId("heatmap-section-mul");
+    expect(within(times).getByTestId("cell-mul-1-1")).toHaveAttribute("data-color", "none");
+    expect(within(times).getByTestId("cell-mul-2-2")).toHaveAttribute("data-color", "none");
   });
 });

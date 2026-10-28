@@ -217,3 +217,71 @@ describe("T30 — child per-day per-game stats", () => {
     expect(anon.statusCode).toBe(401);
   });
 });
+
+describe("T48 — heatmap keyed by operation", () => {
+  async function mixedGameId(): Promise<string> {
+    const now = new Date();
+    const inserted = ctx.db
+      .insert(games)
+      .values({
+        name: "Mixed Ops Heat",
+        operationsJson: JSON.stringify(["add", "mul"]),
+        rangeAMin: 2,
+        rangeAMax: 4,
+        rangeBMin: 1,
+        rangeBMax: 4,
+        allowedCombinationsJson: null,
+        variantCount: 3,
+        baseTimeReward: 10,
+        timePenalty: 5,
+        maxDailyTime: 3600,
+        questionSeconds: 15,
+        hintsJson: "[]",
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning()
+      .get();
+    ctx.db.insert(userGameAssignments).values({ userId, gameId: inserted.id }).run();
+    return inserted.id;
+  }
+
+  function answer(
+    gameId: string,
+    operation: string,
+    factorA: number,
+    factorB: number,
+    chosen: number | null,
+  ) {
+    return ctx.app.inject({
+      method: "POST",
+      url: "/api/answers",
+      headers: { authorization: `Bearer ${token}` },
+      payload: { gameId, operation, factorA, factorB, chosen, elapsedMs: 0 },
+    });
+  }
+
+  it("case 1: answers in + and × land in separate cells", async () => {
+    const gameId = await mixedGameId();
+    await answer(gameId, "add", 2, 3, 5);
+    await answer(gameId, "mul", 2, 3, 6);
+
+    const response = await heatmap();
+    expect(response.statusCode).toBe(200);
+    const cells = response.json().cells as { op: string; a: number; b: number; tries: number }[];
+    expect(cells.find((c) => c.op === "add" && c.a === 2 && c.b === 3)).toMatchObject({ tries: 1 });
+    expect(cells.find((c) => c.op === "mul" && c.a === 2 && c.b === 3)).toMatchObject({ tries: 1 });
+  });
+
+  it("case 2: rows written without an operation read as mul", async () => {
+    ctx.db
+      .insert(matrixStats)
+      .values({ userId, factorA: 2, factorB: 5, correct: true, timestamp: new Date() })
+      .run();
+
+    const response = await heatmap();
+    expect(response.statusCode).toBe(200);
+    const cells = response.json().cells as { op: string; a: number; b: number; tries: number }[];
+    expect(cells.find((c) => c.op === "mul" && c.a === 2 && c.b === 5)).toMatchObject({ tries: 1 });
+  });
+});

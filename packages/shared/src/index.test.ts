@@ -63,11 +63,19 @@ describe("T1 — shared contracts", () => {
   });
 
   it("case 4: heatmap cell rejects unknown color and accepts null accuracy with 0 tries", () => {
-    const cell = { a: 2, b: 5, tries: 0, correct: 0, accuracy: null, color: "none" };
+    const cell = { op: "mul", a: 2, b: 5, tries: 0, correct: 0, accuracy: null, color: "none" };
     expect(heatmapCellSchema.parse(cell)).toEqual(cell);
     expect(() => heatmapCellSchema.parse({ ...cell, color: "blue" })).toThrow();
     expect(
-      heatmapCellSchema.parse({ a: 2, b: 5, tries: 6, correct: 5, accuracy: 0.83, color: "mixed" }),
+      heatmapCellSchema.parse({
+        op: "add",
+        a: 2,
+        b: 5,
+        tries: 6,
+        correct: 5,
+        accuracy: 0.83,
+        color: "mixed",
+      }),
     ).toBeTruthy();
   });
 });
@@ -193,9 +201,7 @@ describe("T42 — operation contract", () => {
 describe("T46 — magic rules per operation", () => {
   it("case 1: 5 + 0 shows the shared +0 rule with no game rules", () => {
     const matches = matchingMagicRules(5, 0, [], "add");
-    expect(matches.map((rule) => rule.text)).toEqual([
-      "Plus 0 — adding nothing keeps the number.",
-    ]);
+    expect(matches.map((rule) => rule.text)).toEqual(["Plus 0 — adding nothing keeps the number."]);
     expect(pickMagicRule(5, 0, [], () => 0, "add")).toBe(
       "Plus 0 — adding nothing keeps the number.",
     );

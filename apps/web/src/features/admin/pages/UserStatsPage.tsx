@@ -1,3 +1,4 @@
+import { ALL_OPERATIONS, type Game, OPERATION_SYMBOLS } from "@mult/shared";
 import { Link, useParams } from "react-router-dom";
 import { AppHeader } from "../../dashboard/components/AppHeader";
 import { HeatmapGrid } from "../../dashboard/components/HeatmapGrid";
@@ -50,6 +51,16 @@ export function UserStatsPage() {
   }
 
   const assignedGames = (games ?? []).filter((game) => user.games.includes(game.id));
+  /**
+   * 7-day table columns grouped by operation (T48): one column per
+   * (operation, game) pair, so a mixed game appears under each of its
+   * operations with its per-game numbers. Row data stays per game.
+   */
+  const weekColumns: { op: (typeof ALL_OPERATIONS)[number]; game: Game }[] = ALL_OPERATIONS.filter(
+    (op) => assignedGames.some((game) => game.operations.includes(op)),
+  ).flatMap((op) =>
+    assignedGames.filter((game) => game.operations.includes(op)).map((game) => ({ op, game })),
+  );
   const summary = stats?.last7Days;
   const days = perGame?.days ?? [];
   const todayEntry = days[days.length - 1];
@@ -115,14 +126,34 @@ export function UserStatsPage() {
             <table className="w-full text-left" data-testid="week-table">
               <thead>
                 <tr className="border-b border-slate-200 text-sm text-slate-500">
-                  <th scope="col" className="py-2">
+                  <th scope="col" className="py-2" rowSpan={2}>
                     Day
                   </th>
-                  <th scope="col" className="py-2">
+                  <th scope="col" className="py-2" rowSpan={2}>
                     Total
                   </th>
-                  {assignedGames.map((game) => (
-                    <th key={game.id} scope="col" className="py-2">
+                  {ALL_OPERATIONS.filter((op) =>
+                    assignedGames.some((game) => game.operations.includes(op)),
+                  ).map((op) => {
+                    const count = assignedGames.filter((game) =>
+                      game.operations.includes(op),
+                    ).length;
+                    return (
+                      <th
+                        key={op}
+                        scope="col"
+                        colSpan={count}
+                        className="py-2 text-center"
+                        data-testid={`week-op-${op}`}
+                      >
+                        <span aria-hidden="true">{OPERATION_SYMBOLS[op]}</span>
+                      </th>
+                    );
+                  })}
+                </tr>
+                <tr className="border-b border-slate-200 text-sm text-slate-500">
+                  {weekColumns.map(({ op, game }) => (
+                    <th key={`${op}-${game.id}`} scope="col" className="py-2 font-normal">
                       {game.name}
                     </th>
                   ))}
@@ -145,13 +176,13 @@ export function UserStatsPage() {
                           ? `${formatSignedDuration(summary.earnedSeconds)} · ${summary.correctTries}/${summary.totalTries} (+${formatDuration(summary.gainSeconds)} −${formatDuration(summary.lostSeconds)})`
                           : "—"}
                       </td>
-                      {assignedGames.map((game) => {
+                      {weekColumns.map(({ op, game }) => {
                         const entry = day.games.find((row) => row.gameId === game.id);
                         return (
                           <td
-                            key={game.id}
+                            key={`${op}-${game.id}`}
                             className="py-2"
-                            data-testid={`week-cell-${day.date}-${game.id}`}
+                            data-testid={`week-cell-${day.date}-${op}-${game.id}`}
                           >
                             {entry
                               ? `+${formatDuration(entry.timeEarnedSeconds)} · ${entry.correctTries}/${entry.totalTries}`

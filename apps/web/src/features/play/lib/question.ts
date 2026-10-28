@@ -204,7 +204,7 @@ function rollOperands(
 
 /** Roll one question inside the game's ranges / combination list. */
 export function generateQuestion(game: Game, rng: () => number = Math.random): Question {
-  const operations = game.operations.length > 0 ? game.operations : ["mul"];
+  const operations: Operation[] = game.operations.length > 0 ? game.operations : ["mul"];
   const rolled = operations[Math.floor(rng() * operations.length)] ?? "mul";
   const combos = allowedCombinations(game);
   const { operation, factorA, factorB } = rollOperands(game, rolled, combos, rng);

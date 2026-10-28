@@ -345,6 +345,7 @@ export type HeatmapColor = z.infer<typeof heatmapColorSchema>;
 
 export const heatmapCellSchema = z
   .object({
+    op: operationSchema,
     a: factorSchema,
     b: factorSchema,
     tries: z.number().int().min(0),

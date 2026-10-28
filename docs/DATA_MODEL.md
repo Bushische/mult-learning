@@ -73,8 +73,9 @@ General rules (fixed, stack-level):
 |---|---|---|
 | id | text PK | cuid2 |
 | user_id | text, FK users.id ON DELETE CASCADE | |
+| operation | text NOT NULL, default `'mul'` | `add\|sub\|mul\|div` — rows written before T48 read as `mul` |
 | factor_a / factor_b | integer NOT NULL | 1..20 |
-| correct | integer (boolean) NOT NULL | `true` only when `chosen === a * b` |
+| correct | integer (boolean) NOT NULL | `true` only when `chosen === applyOp(a, b, operation)` |
 | timestamp | timestamp NOT NULL (epoch) | indexed `(user_id, timestamp)` — drives the rolling 7-day window |
 
 Options pattern for `@paralleldrive/cuid2` ids:

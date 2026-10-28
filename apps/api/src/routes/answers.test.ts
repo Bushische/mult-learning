@@ -492,7 +492,10 @@ describe("T44 — answer checking per operation", () => {
       .get();
     const child = ctx.db.select().from(users).where(eq(users.username, "child1")).get();
     const { userGameAssignments } = await import("../db/schema.js");
-    ctx.db.insert(userGameAssignments).values({ userId: child?.id ?? "", gameId: inserted.id }).run();
+    ctx.db
+      .insert(userGameAssignments)
+      .values({ userId: child?.id ?? "", gameId: inserted.id })
+      .run();
     return inserted.id;
   }
 

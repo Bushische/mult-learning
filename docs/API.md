@@ -80,9 +80,9 @@
 
 - **GET /stats/heatmap** (auth, own stats) → rolling last-7-day window (`matrix_stats.timestamp ≥ now - 7d`):
   ```json
-  { "cells": [ { "a": 2, "b": 5, "tries": 6, "correct": 5, "accuracy": 0.83, "color": "mixed" } ] }
+  { "cells": [ { "op": "mul", "a": 2, "b": 5, "tries": 6, "correct": 5, "accuracy": 0.83, "color": "mixed" } ] }
   ```
-  `accuracy` = correct / tries (`null` when tries = 0). `color` buckets: `green` accuracy ≥ 0.8,
+  one cell per (operation, combination); `accuracy` = correct / tries (`null` when tries = 0). `color` buckets: `green` accuracy ≥ 0.8,
   `red` accuracy < 0.5, `mixed` in between, `none` when tries = 0. Cells cover the game's A×B range
   (`allowedCombinations` when set).
 - **GET /stats/daily** (auth) → `{ "date":"YYYY-MM-DD", "totalTries": n, "correctTries": n, "timeEarnedSeconds": n, "timeLostSeconds": n, "timeBankSeconds": n }`

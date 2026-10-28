@@ -137,6 +137,8 @@ export const matrixStats = sqliteTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    /** Operation answered (default `mul` for rows written before T48). */
+    operation: text("operation").notNull().default("mul"),
     factorA: integer("factor_a").notNull(),
     factorB: integer("factor_b").notNull(),
     correct: integer("correct", { mode: "boolean" }).notNull(),

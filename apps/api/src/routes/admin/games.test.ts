@@ -359,7 +359,9 @@ describe("T47 — operations in the admin games API", () => {
     const game = created.json() as { id: string };
     const listed = await admin("GET", "/api/admin/games");
     expect(
-      (listed.json() as { id: string; operations: string[] }[]).find((entry) => entry.id === game.id),
+      (listed.json() as { id: string; operations: string[] }[]).find(
+        (entry) => entry.id === game.id,
+      ),
     ).toMatchObject({ operations: ["add", "sub"] });
 
     const patched = await admin("PATCH", `/api/admin/games/${game.id}`, {

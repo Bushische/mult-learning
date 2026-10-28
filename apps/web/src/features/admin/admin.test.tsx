@@ -155,8 +155,8 @@ function installServer(): { state: ServerState; stub: ApiStub } {
         data: {
           user: { id: "u-child1", username: "child1", timeBankSeconds: 45 },
           heatmap: [
-            { a: 2, b: 5, tries: 1, correct: 1, accuracy: 1, color: "green" },
-            { a: 2, b: 6, tries: 0, correct: 0, accuracy: null, color: "none" },
+            { op: "mul", a: 2, b: 5, tries: 1, correct: 1, accuracy: 1, color: "green" },
+            { op: "mul", a: 2, b: 6, tries: 0, correct: 0, accuracy: null, color: "none" },
           ],
           last7Days: { attempts: 14, correct: 11, incorrect: 3, earnedSeconds: 70 },
         },
@@ -511,8 +511,8 @@ describe("T20 — child stats heatmap + week summary", () => {
     expect(screen.getByTestId("week-correct")).toHaveTextContent("Correct: 11");
     expect(screen.getByTestId("week-incorrect")).toHaveTextContent("Incorrect: 3");
     expect(screen.getByTestId("week-earned")).toHaveTextContent("Earned: 1:10");
-    expect(screen.getByTestId("cell-2-5")).toHaveAttribute("data-color", "green");
-    expect(screen.getByTestId("cell-2-6")).toHaveAttribute("data-color", "none");
+    expect(screen.getByTestId("cell-mul-2-5")).toHaveAttribute("data-color", "green");
+    expect(screen.getByTestId("cell-mul-2-6")).toHaveAttribute("data-color", "none");
   });
 });
 
@@ -589,10 +589,10 @@ describe("T28 — readable child stats with per-game results", () => {
     expect(ordered[0]?.getAttribute("data-testid")).toBe(`week-row-${isoDate(0)}`);
     expect(ordered[6]?.getAttribute("data-testid")).toBe(`week-row-${isoDate(6)}`);
 
-    const played = screen.getByTestId(`week-cell-${isoDate(3)}-g-easy`);
+    const played = screen.getByTestId(`week-cell-${isoDate(3)}-mul-g-easy`);
     expect(played).toHaveTextContent("+0:30");
     expect(played).toHaveTextContent("3/4");
-    const idle = screen.getByTestId(`week-cell-${isoDate(2)}-g-easy`);
+    const idle = screen.getByTestId(`week-cell-${isoDate(2)}-mul-g-easy`);
     expect(idle).toHaveTextContent("—");
     // Played day: Total is net of penalties (30 earned − 5 lost).
     const playedTotal = screen.getByTestId(`week-total-${isoDate(3)}`);
@@ -604,7 +604,7 @@ describe("T28 — readable child stats with per-game results", () => {
     const legacyTotal = screen.getByTestId(`week-total-${isoDate(4)}`);
     expect(legacyTotal).toHaveTextContent("+0:40");
     expect(legacyTotal).toHaveTextContent("4/5");
-    expect(screen.getByTestId(`week-cell-${isoDate(4)}-g-easy`)).toHaveTextContent("—");
+    expect(screen.getByTestId(`week-cell-${isoDate(4)}-mul-g-easy`)).toHaveTextContent("—");
   });
 
   it("case 3: no assigned games shows a message and no table", async () => {

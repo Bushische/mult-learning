@@ -1,4 +1,10 @@
-import type { DailyStats, HeatmapCell, HeatmapResponse, PerGameDailyResponse } from "@mult/shared";
+import type {
+  DailyStats,
+  HeatmapCell,
+  HeatmapResponse,
+  Operation,
+  PerGameDailyResponse,
+} from "@mult/shared";
 import { and, eq, gte } from "drizzle-orm";
 import type { Db } from "../db/client.js";
 import { dailyStats, gameDailyStats, matrixStats, users } from "../db/schema.js";
@@ -16,26 +22,30 @@ export function colorForAccuracy(tries: number, accuracy: number | null): Heatma
   return "red";
 }
 
-/** Every (a, b) combination the user's assigned games allow. */
-export function combinationsForGames(db: Db, userId: string): { a: number; b: number }[] {
-  const combos: { a: number; b: number }[] = [];
+/** Every (operation, a, b) combination the user's assigned games allow. */
+export function combinationsForGames(
+  db: Db,
+  userId: string,
+): { op: Operation; a: number; b: number }[] {
+  const combos: { op: Operation; a: number; b: number }[] = [];
   const seen = new Set<string>();
+  const push = (op: Operation, a: number, b: number) => {
+    const key = `${op}:${a}:${b}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    combos.push({ op, a, b });
+  };
   for (const game of listGamesForUser(db, userId)) {
+    const operations: Operation[] = game.operations.length > 0 ? game.operations : ["mul"];
     if (game.allowedCombinations && game.allowedCombinations.length > 0) {
       for (const [a, b] of game.allowedCombinations) {
-        const key = `${a}:${b}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        combos.push({ a, b });
+        for (const op of operations) push(op, a, b);
       }
       continue;
     }
     for (let a = game.rangeA.min; a <= game.rangeA.max; a += 1) {
       for (let b = game.rangeB.min; b <= game.rangeB.max; b += 1) {
-        const key = `${a}:${b}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        combos.push({ a, b });
+        for (const op of operations) push(op, a, b);
       }
     }
   }
@@ -43,8 +53,9 @@ export function combinationsForGames(db: Db, userId: string): { a: number; b: nu
 }
 
 /**
- * Rolling 7-day heatmap for one user: one cell per combination of the user's
- * assigned games, aggregated from `matrix_stats` inside the window.
+ * Rolling 7-day heatmap for one user: one cell per (operation, combination)
+ * of the user's assigned games, aggregated from `matrix_stats` inside the
+ * window. Rows written before T48 carry the `mul` default.
  */
 export function getHeatmap(db: Db, userId: string, now: Date = new Date()): HeatmapResponse {
   const windowStart = new Date(now.getTime() - HEATMAP_WINDOW_DAYS * 24 * 60 * 60 * 1000);
@@ -57,17 +68,19 @@ export function getHeatmap(db: Db, userId: string, now: Date = new Date()): Heat
 
   const aggregates = new Map<string, { tries: number; correct: number }>();
   for (const row of rows) {
-    const key = `${row.factorA}:${row.factorB}`;
+    const op = (row.operation as string | null) ?? "mul";
+    const key = `${op}:${row.factorA}:${row.factorB}`;
     const current = aggregates.get(key) ?? { tries: 0, correct: 0 };
     current.tries += 1;
     if (row.correct) current.correct += 1;
     aggregates.set(key, current);
   }
 
-  const cells: HeatmapCell[] = combinationsForGames(db, userId).map(({ a, b }) => {
-    const aggregate = aggregates.get(`${a}:${b}`) ?? { tries: 0, correct: 0 };
+  const cells: HeatmapCell[] = combinationsForGames(db, userId).map(({ op, a, b }) => {
+    const aggregate = aggregates.get(`${op}:${a}:${b}`) ?? { tries: 0, correct: 0 };
     const accuracy = aggregate.tries === 0 ? null : aggregate.correct / aggregate.tries;
     return {
+      op: op as HeatmapCell["op"],
       a,
       b,
       tries: aggregate.tries,

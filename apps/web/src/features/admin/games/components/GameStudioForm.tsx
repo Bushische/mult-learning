@@ -84,7 +84,11 @@ export function GameStudioForm({ editing, onSubmit, onCancelEdit }: GameStudioFo
     patch({
       operations: form.operations.includes(operation)
         ? form.operations.filter((item) => item !== operation)
-        : [...ALL_OPERATIONS.filter((item) => item === operation || form.operations.includes(item))],
+        : [
+            ...ALL_OPERATIONS.filter(
+              (item) => item === operation || form.operations.includes(item),
+            ),
+          ],
     });
   };
 

@@ -1,0 +1,1 @@
+ALTER TABLE `matrix_stats` ADD `operation` text DEFAULT 'mul' NOT NULL;

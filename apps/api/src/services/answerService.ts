@@ -62,6 +62,7 @@ export function submitAnswer(db: Db, userId: string, request: AnswerRequest): An
     tx.insert(matrixStats)
       .values({
         userId,
+        operation: request.operation,
         factorA: request.factorA,
         factorB: request.factorB,
         correct,
